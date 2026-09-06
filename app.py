@@ -599,18 +599,22 @@ elif st.session_state["current_view"] == "SAVED":
             st.info("No saved drafts in the vault.")
         else:
             for item in items:
-                col_i1, col_i2 = st.columns([3, 1])
+                col_i1, col_load, col_del = st.columns([3, 1, 0.6])
                 with col_i1:
                     st.markdown(f"### 🎬 {item['title']}")
                     st.markdown(f"<span class='time-badge'>SAVED AT: {item.get('saved_at_formatted', 'N/A')}</span>", unsafe_allow_html=True)
-                with col_i2:
-                    if st.button(f"LOAD SEQUENCE", key=f"load_{item['id']}"):
+                with col_load:
+                    if st.button("LOAD SEQUENCE", key=f"load_{item['id']}", use_container_width=True):
                         st.session_state["active_project"] = {
                             "title": item["title"],
                             "script": item["script_content"],
                             "data": item["parsed_data"]
                         }
                         st.session_state["current_view"] = "WORKSPACE"
+                        st.rerun()
+                with col_del:
+                    if st.button("🗑️", key=f"del_{item['id']}", help="Delete Project Permanently", use_container_width=True):
+                        supabase.table("saved_scripts").delete().eq("id", item["id"]).execute()
                         st.rerun()
                 st.divider()
     except Exception as e:
