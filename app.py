@@ -189,69 +189,77 @@ def get_current_ist_time():
     return datetime.now(tz).strftime("%d %b %Y • %I:%M:%S %p IST")
 
 # -------------------------------------------------------------
-# SAFE UNICODE PDF GENERATOR ENGINE
+# SAFE UNICODE PDF GENERATOR ENGINE (FIXED GEOMETRY)
 # -------------------------------------------------------------
 def safe_pdf_text(text):
     if not text:
         return ""
-    # Remove unsupported characters & convert to standard ASCII safely
+    # Safe ASCII sanitization to prevent unicode exceptions
     return str(text).encode('ascii', 'ignore').decode('ascii')
 
 def generate_dossier_pdf(title, raw_text, p_data, timestamp):
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_left_margin(15)
+    pdf.set_right_margin(15)
     pdf.add_page()
     
+    # Effective printable width
+    content_w = pdf.epw
+
     # Title & Header
     pdf.set_font("Helvetica", 'B', 18)
-    pdf.cell(0, 12, safe_pdf_text("CINEMATEX PRODUCTION DOSSIER"), ln=True, align="C")
+    pdf.cell(content_w, 12, safe_pdf_text("CINEMATEX PRODUCTION DOSSIER"), new_x="LMARGIN", new_y="NEXT", align="C")
     pdf.set_font("Helvetica", 'I', 10)
-    pdf.cell(0, 8, safe_pdf_text(f"Project: {title} | Forged: {timestamp}"), ln=True, align="C")
+    pdf.cell(content_w, 8, safe_pdf_text(f"Project: {title} | Forged: {timestamp}"), new_x="LMARGIN", new_y="NEXT", align="C")
     pdf.ln(6)
     
     # 1. Screenplay
     pdf.set_font("Helvetica", 'B', 13)
-    pdf.cell(0, 10, safe_pdf_text("1. INDUSTRY FORMATTED SCREENPLAY"), ln=True)
+    pdf.cell(content_w, 10, safe_pdf_text("1. INDUSTRY FORMATTED SCREENPLAY"), new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Courier", '', 9)
-    script_content = p_data.get("formatted_script", "No script data.")
-    pdf.multi_cell(0, 5, safe_pdf_text(script_content))
+    script_content = p_data.get("formatted_script", "No script data.") if isinstance(p_data, dict) else "No script data."
+    pdf.multi_cell(content_w, 5, safe_pdf_text(script_content))
     pdf.ln(6)
     
     # 2. Scene Beats
-    pdf.set_font("Helvetica", 'B', 13)
-    pdf.cell(0, 10, safe_pdf_text("2. SCENE BEATS & NARRATIVE ARCHITECTURE"), ln=True)
-    for b in p_data.get("scene_beats", []):
-        t_title = f"- {b.get('scene_title', 'Scene')} [Tone: {b.get('emotional_tone')} | Tension: {b.get('tension_rating')}]"
-        pdf.set_font("Helvetica", 'B', 10)
-        pdf.cell(0, 6, safe_pdf_text(t_title), ln=True)
-        pdf.set_font("Helvetica", '', 9)
-        pdf.multi_cell(0, 5, safe_pdf_text(f"Progression: {b.get('micro_beats', '')}"))
-        pdf.multi_cell(0, 5, safe_pdf_text(f"Director Staging: {b.get('director_vision', '')}"))
-        pdf.ln(2)
-    pdf.ln(6)
+    if isinstance(p_data, dict) and p_data.get("scene_beats"):
+        pdf.set_font("Helvetica", 'B', 13)
+        pdf.cell(content_w, 10, safe_pdf_text("2. SCENE BEATS & NARRATIVE ARCHITECTURE"), new_x="LMARGIN", new_y="NEXT")
+        for b in p_data.get("scene_beats", []):
+            t_title = f"- {b.get('scene_title', 'Scene')} [Tone: {b.get('emotional_tone')} | Tension: {b.get('tension_rating')}]"
+            pdf.set_font("Helvetica", 'B', 10)
+            pdf.cell(content_w, 6, safe_pdf_text(t_title), new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("Helvetica", '', 9)
+            pdf.multi_cell(content_w, 5, safe_pdf_text(f"Progression: {b.get('micro_beats', '')}"))
+            pdf.multi_cell(content_w, 5, safe_pdf_text(f"Director Staging: {b.get('director_vision', '')}"))
+            pdf.ln(2)
+        pdf.ln(6)
 
     # 3. Character Bible
-    pdf.set_font("Helvetica", 'B', 13)
-    pdf.cell(0, 10, safe_pdf_text("3. CHARACTER PSYCHOLOGY & BIBLE"), ln=True)
-    for c in p_data.get("characters", []):
-        pdf.set_font("Helvetica", 'B', 10)
-        pdf.cell(0, 6, safe_pdf_text(f"- {c.get('name', '')} ({c.get('role', '')})"), ln=True)
-        pdf.set_font("Helvetica", '', 9)
-        pdf.multi_cell(0, 5, safe_pdf_text(f"Visual & Attire: {c.get('appearance', '')}"))
-        pdf.multi_cell(0, 5, safe_pdf_text(f"Mannerisms: {c.get('quirks', '')}"))
-        pdf.multi_cell(0, 5, safe_pdf_text(f"Core Conflict: {c.get('core_conflict', '')}"))
-        pdf.ln(2)
-    pdf.ln(6)
+    if isinstance(p_data, dict) and p_data.get("characters"):
+        pdf.set_font("Helvetica", 'B', 13)
+        pdf.cell(content_w, 10, safe_pdf_text("3. CHARACTER PSYCHOLOGY & BIBLE"), new_x="LMARGIN", new_y="NEXT")
+        for c in p_data.get("characters", []):
+            pdf.set_font("Helvetica", 'B', 10)
+            pdf.cell(content_w, 6, safe_pdf_text(f"- {c.get('name', '')} ({c.get('role', '')})"), new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("Helvetica", '', 9)
+            pdf.multi_cell(content_w, 5, safe_pdf_text(f"Visual & Attire: {c.get('appearance', '')}"))
+            pdf.multi_cell(content_w, 5, safe_pdf_text(f"Mannerisms: {c.get('quirks', '')}"))
+            pdf.multi_cell(content_w, 5, safe_pdf_text(f"Core Conflict: {c.get('core_conflict', '')}"))
+            pdf.ln(2)
+        pdf.ln(6)
 
     # 4. Storyboard Prompts
-    pdf.set_font("Helvetica", 'B', 13)
-    pdf.cell(0, 10, safe_pdf_text("4. DETAILED STORYBOARD PROMPTS (MIDJOURNEY / FLUX)"), ln=True)
-    for idx, p in enumerate(p_data.get("storyboard_prompts", []), 1):
-        pdf.set_font("Helvetica", 'B', 9)
-        pdf.cell(0, 6, safe_pdf_text(f"Frame {idx} Prompt:"), ln=True)
-        pdf.set_font("Helvetica", 'I', 8)
-        pdf.multi_cell(0, 5, safe_pdf_text(p))
-        pdf.ln(2)
+    if isinstance(p_data, dict) and p_data.get("storyboard_prompts"):
+        pdf.set_font("Helvetica", 'B', 13)
+        pdf.cell(content_w, 10, safe_pdf_text("4. DETAILED STORYBOARD PROMPTS (MIDJOURNEY / FLUX)"), new_x="LMARGIN", new_y="NEXT")
+        for idx, p in enumerate(p_data.get("storyboard_prompts", []), 1):
+            pdf.set_font("Helvetica", 'B', 9)
+            pdf.cell(content_w, 6, safe_pdf_text(f"Frame {idx} Prompt:"), new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("Helvetica", 'I', 8)
+            pdf.multi_cell(content_w, 5, safe_pdf_text(p))
+            pdf.ln(2)
 
     return bytes(pdf.output())
 
