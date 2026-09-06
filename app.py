@@ -1,3 +1,4 @@
+
 import streamlit as st
 from google import genai
 from supabase import create_client, Client
@@ -5,34 +6,35 @@ import json
 import time
 from datetime import datetime
 import pytz
+from fpdf import FPDF
+import io
 
 # -------------------------------------------------------------
 # PAGE CONFIGURATION
 # -------------------------------------------------------------
 st.set_page_config(
-    page_title="SCENEFORGE // FUNKY CYBER STUDIO",
-    page_icon="⚡",
+    page_title="CINEMATEX // NEURAL CINEMA DECK",
+    page_icon="🎬",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
 # -------------------------------------------------------------
-# FUNKY CYBER-RETRO GAMING HUD STYLING
+# CINEMATEX CYBER-RETRO STYLING & SCROLLBAR ENGINE
 # -------------------------------------------------------------
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Bungee&family=Orbitron:wght@600;900&family=Rajdhani:wght@600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Bungee&family=Orbitron:wght@600;900&family=Rajdhani:wght@600;700&family=JetBrains+Mono:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap');
 
     .stApp {
-        background: radial-gradient(circle at 10% 10%, #150928 0%, #06050b 100%) !important;
+        background: radial-gradient(circle at 10% 10%, #130722 0%, #040308 100%) !important;
         color: #f1f5f9;
         font-family: 'Rajdhani', sans-serif;
     }
 
-    /* Funky Glowing Typography */
     .funky-title {
         font-family: 'Bungee', cursive;
-        font-size: 2.7rem;
+        font-size: 2.6rem;
         background: linear-gradient(90deg, #ff007f 0%, #00f0ff 50%, #ffe600 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
@@ -47,24 +49,22 @@ st.markdown("""
         letter-spacing: 2px;
     }
 
-    /* Ambient Background Watermark Text */
     .faded-watermark {
         position: relative;
         text-align: center;
         font-family: 'Bungee', sans-serif;
-        font-size: 2.8rem;
+        font-size: 2.5rem;
         color: rgba(0, 240, 255, 0.04);
         text-transform: uppercase;
         letter-spacing: 3px;
         user-select: none;
         pointer-events: none;
-        margin-bottom: -40px;
-        margin-top: 10px;
+        margin-bottom: -35px;
+        margin-top: 5px;
     }
 
-    /* Funky Action Cards */
     .funky-card {
-        background: rgba(22, 16, 42, 0.75);
+        background: rgba(20, 14, 38, 0.8);
         border: 2px solid #ff007f;
         box-shadow: 0 0 20px rgba(255, 0, 127, 0.25);
         border-radius: 12px;
@@ -78,11 +78,55 @@ st.markdown("""
         border-color: #00f0ff;
     }
 
-    /* Input Buffers */
+    /* Precision Cyber Scrollbar */
+    .scroll-container {
+        max-height: 560px;
+        overflow-y: auto;
+        padding-right: 14px;
+        margin-top: 10px;
+    }
+    .scroll-container::-webkit-scrollbar {
+        width: 7px;
+    }
+    .scroll-container::-webkit-scrollbar-track {
+        background: #090613;
+        border-radius: 4px;
+    }
+    .scroll-container::-webkit-scrollbar-thumb {
+        background: #00f0ff;
+        border-radius: 4px;
+        box-shadow: 0 0 12px #00f0ff;
+    }
+
+    /* Screenplay Display (Courier Standard) */
+    .screenplay-box {
+        font-family: 'Courier Prime', Courier, monospace;
+        background-color: #07090e;
+        color: #f8fafc;
+        border: 1.5px solid #00f0ff;
+        border-radius: 8px;
+        padding: 26px;
+        line-height: 1.65;
+        font-size: 0.95rem;
+        white-space: pre-wrap;
+        box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.9);
+    }
+
+    .cyber-card {
+        background: rgba(14, 18, 30, 0.85);
+        border: 1px solid rgba(0, 240, 255, 0.25);
+        border-left: 5px solid #00f0ff;
+        border-radius: 8px;
+        padding: 18px;
+        margin-bottom: 14px;
+    }
+    .cyber-card-alt { border-left: 5px solid #ff0055; }
+    .cyber-card-gold { border-left: 5px solid #ffe600; }
+
     .stTextInput input, .stTextArea textarea {
-        background-color: #0d0818 !important;
+        background-color: #0c0817 !important;
         color: #00f0ff !important;
-        border: 1.5px solid #2e1e52 !important;
+        border: 1.5px solid #2d1d4f !important;
         border-radius: 8px !important;
         font-family: 'JetBrains Mono', monospace !important;
     }
@@ -91,7 +135,6 @@ st.markdown("""
         box-shadow: 0 0 15px rgba(255, 0, 127, 0.5) !important;
     }
 
-    /* Funky Buttons */
     div.stButton > button {
         background: linear-gradient(135deg, #ff007f 0%, #7928ca 100%) !important;
         color: #ffffff !important;
@@ -101,20 +144,18 @@ st.markdown("""
         border-radius: 8px !important;
         padding: 10px 20px !important;
         box-shadow: 0 0 18px rgba(255, 0, 127, 0.4) !important;
-        transition: transform 0.15s ease !important;
     }
     div.stButton > button:hover {
-        transform: scale(1.03) !important;
+        transform: scale(1.02) !important;
         box-shadow: 0 0 28px rgba(0, 240, 255, 0.7) !important;
     }
 
-    /* Status Pill */
     .time-badge {
         font-family: 'JetBrains Mono', monospace;
         color: #ffe600;
         background: rgba(255, 230, 0, 0.1);
         border: 1px solid rgba(255, 230, 0, 0.3);
-        padding: 2px 8px;
+        padding: 4px 10px;
         border-radius: 4px;
         font-size: 0.8rem;
     }
@@ -122,10 +163,10 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------------------
-# SUPABASE SETUP (Insert credentials here)
+# SUPABASE CONNECTION CONFIG
 # -------------------------------------------------------------
-SUPABASE_URL = "https://xiicgxqmmrvvvgdvkbej.supabase.co"
-SUPABASE_KEY = "sb_publishable_l3TcwbLc7Dm9X-Ji-7bJdw_M0ey36-8"
+SUPABASE_URL = "https://YOUR_SUPABASE_PROJECT_URL.supabase.co"
+SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY"
 
 @st.cache_resource
 def get_supabase():
@@ -136,25 +177,89 @@ def get_supabase():
 
 supabase: Client = get_supabase()
 
-# Session State Controller
 if "user" not in st.session_state:
     st.session_state["user"] = None
 if "current_view" not in st.session_state:
-    st.session_state["current_view"] = "HUB"  # HUB, WORKSPACE, SAVED, EXPORTED
+    st.session_state["current_view"] = "HUB"
 if "active_project" not in st.session_state:
-    st.session_state["active_project"] = {"title": "New Sequence", "script": "", "data": None}
+    st.session_state["active_project"] = {"title": "Untitled Sequence", "script": "", "data": None}
 
 def get_current_ist_time():
     tz = pytz.timezone('Asia/Kolkata')
     return datetime.now(tz).strftime("%d %b %Y • %I:%M:%S %p IST")
 
+# -------------------------------------------------------------
+# ROBUST PDF GENERATOR ENGINE
+# -------------------------------------------------------------
+def generate_dossier_pdf(title, raw_text, p_data, timestamp):
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    
+    # Title & Header
+    pdf.set_font("Helvetica", 'B', 20)
+    pdf.cell(0, 12, "CINEMATEX PRODUCTION DOSSIER", ln=True, align="C")
+    pdf.set_font("Helvetica", 'I', 11)
+    pdf.cell(0, 8, f"Project: {title} | Forged: {timestamp}", ln=True, align="C")
+    pdf.ln(8)
+    
+    # 1. Screenplay
+    pdf.set_font("Helvetica", 'B', 14)
+    pdf.cell(0, 10, "1. INDUSTRY FORMATTED SCREENPLAY", ln=True)
+    pdf.set_font("Courier", '', 10)
+    script_content = p_data.get("formatted_script", "No script data.")
+    # Sanitize characters for standard PDF fonts
+    clean_script = script_content.encode('latin-1', 'replace').decode('latin-1')
+    pdf.multi_cell(0, 6, clean_script)
+    pdf.ln(10)
+    
+    # 2. Scene Beats
+    pdf.set_font("Helvetica", 'B', 14)
+    pdf.cell(0, 10, "2. SCENE BEATS & NARRATIVE ARCHITECTURE", ln=True)
+    pdf.set_font("Helvetica", '', 10)
+    for b in p_data.get("scene_beats", []):
+        t_title = f"- {b.get('scene_title', 'Scene')} [Tone: {b.get('emotional_tone')} | Tension: {b.get('tension_rating')}]"
+        pdf.set_font("Helvetica", 'B', 10)
+        pdf.cell(0, 7, t_title.encode('latin-1', 'replace').decode('latin-1'), ln=True)
+        pdf.set_font("Helvetica", '', 9)
+        pdf.multi_cell(0, 5, f"Progression: {b.get('micro_beats', '')}".encode('latin-1', 'replace').decode('latin-1'))
+        pdf.multi_cell(0, 5, f"Director Staging: {b.get('director_vision', '')}".encode('latin-1', 'replace').decode('latin-1'))
+        pdf.ln(3)
+    pdf.ln(8)
+
+    # 3. Character Bible
+    pdf.set_font("Helvetica", 'B', 14)
+    pdf.cell(0, 10, "3. CHARACTER PSYCHOLOGY & BIBLE", ln=True)
+    for c in p_data.get("characters", []):
+        pdf.set_font("Helvetica", 'B', 10)
+        pdf.cell(0, 7, f"- {c.get('name', '')} ({c.get('role', '')})".encode('latin-1', 'replace').decode('latin-1'), ln=True)
+        pdf.set_font("Helvetica", '', 9)
+        pdf.multi_cell(0, 5, f"Visual & Attire: {c.get('appearance', '')}".encode('latin-1', 'replace').decode('latin-1'))
+        pdf.multi_cell(0, 5, f"Mannerisms: {c.get('quirks', '')}".encode('latin-1', 'replace').decode('latin-1'))
+        pdf.multi_cell(0, 5, f"Core Conflict: {c.get('core_conflict', '')}".encode('latin-1', 'replace').decode('latin-1'))
+        pdf.ln(3)
+    pdf.ln(8)
+
+    # 4. Storyboard Prompts
+    pdf.set_font("Helvetica", 'B', 14)
+    pdf.cell(0, 10, "4. DETAILED STORYBOARD PROMPTS (MIDJOURNEY / FLUX)", ln=True)
+    pdf.set_font("Helvetica", '', 9)
+    for idx, p in enumerate(p_data.get("storyboard_prompts", []), 1):
+        pdf.set_font("Helvetica", 'B', 9)
+        pdf.cell(0, 6, f"Frame {idx} Prompt:", ln=True)
+        pdf.set_font("Helvetica", 'I', 8)
+        pdf.multi_cell(0, 5, p.encode('latin-1', 'replace').decode('latin-1'))
+        pdf.ln(3)
+
+    return bytes(pdf.output())
+
 # =============================================================
-# 1. FUNKY LOGIN / REGISTER GATEWAY (CLEAN HUD)
+# 1. AUTHENTICATION GATEWAY
 # =============================================================
 if st.session_state["user"] is None:
     st.write("")
-    st.markdown('<div class="funky-title" style="text-align:center;">⚡ SCENEFORGE // FUNKY ACCESS</div>', unsafe_allow_html=True)
-    st.markdown('<div class="funky-subtitle" style="text-align:center;">AUTHENTICATE TO UNLOCK THE CINEMA CYBER-DECK</div>', unsafe_allow_html=True)
+    st.markdown('<div class="funky-title" style="text-align:center;">⚡ CINEMATEX // ACCESS</div>', unsafe_allow_html=True)
+    st.markdown('<div class="funky-subtitle" style="text-align:center;">NEURAL PRE-PRODUCTION ENGINE FOR SCREENWRITERS</div>', unsafe_allow_html=True)
     st.write("")
 
     col_l1, col_center, col_l2 = st.columns([1, 1.4, 1])
@@ -179,26 +284,27 @@ if st.session_state["user"] is None:
         else:
             if st.button("✨ FORGE MY CREATOR ACCOUNT", use_container_width=True):
                 if not email or not password:
-                    st.error("Please provide valid credentials!")
+                    st.error("Please enter email & password!")
                 else:
                     try:
                         res = supabase.auth.sign_up({"email": email.strip(), "password": password})
                         if res.user:
                             st.session_state["user"] = res.user
                             st.session_state["current_view"] = "HUB"
-                            st.success("Account created & activated! Redirecting...")
+                            st.success("Account activated! Redirecting...")
                             st.rerun()
                     except Exception as e:
                         st.error(f"Registration error: {e}")
     st.stop()
+
 # =============================================================
-# TOP GLOBAL NAVIGATION
+# TOP NAVIGATION
 # =============================================================
 col_nav1, col_nav2, col_nav3 = st.columns([2.5, 2, 1])
 with col_nav1:
-    st.markdown('<div class="funky-title" style="font-size:1.8rem;">⚡ SCENEFORGE</div>', unsafe_allow_html=True)
+    st.markdown('<div class="funky-title" style="font-size:1.8rem;">⚡ CINEMATEX</div>', unsafe_allow_html=True)
 with col_nav2:
-    st.markdown(f"<div style='margin-top:12px; font-size:13px; color:#94a3b8;'>CREATOR: <b style='color:#00f0ff;'>{st.session_state['user'].email}</b></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='margin-top:12px; font-size:13px; color:#94a3b8;'>DIRECTOR: <b style='color:#00f0ff;'>{st.session_state['user'].email}</b></div>", unsafe_allow_html=True)
 with col_nav3:
     if st.button("🚪 LOGOUT", use_container_width=True):
         supabase.auth.sign_out()
@@ -207,58 +313,54 @@ with col_nav3:
         st.rerun()
 
 # =============================================================
-# 2. THE COMMAND NEXUS (THE 3-DOOR HUB)
+# 2. STUDIO COMMAND NEXUS (HUB)
 # =============================================================
 if st.session_state["current_view"] == "HUB":
     st.write("")
     st.markdown("<h2 style='text-align:center; font-family:Orbitron; color:#ffe600;'>⚡ STUDIO COMMAND NEXUS</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center; color:#94a3b8;'>Choose your pre-production trajectory below</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center; color:#94a3b8;'>Select your pre-production trajectory below</p>", unsafe_allow_html=True)
     st.write("")
 
     col_h1, col_h2, col_h3 = st.columns(3, gap="medium")
-    
-    # CARD 1: CREATE NEW PROJECT
     with col_h1:
         st.markdown("""
         <div class="funky-card">
             <h1 style="margin:0;">🚀</h1>
             <h3 style="color:#00f0ff; margin-top:10px;">CREATE NEW PROJECT</h3>
-            <p style="color:#94a3b8; font-size:14px;">Ingest raw screenplays in Tamil, Tanglish, or English to forge production assets.</p>
+            <p style="color:#94a3b8; font-size:14px;">Ingest raw story passages, casual narrations, or dialogues in Tamil, Tanglish, or English.</p>
         </div>
         """, unsafe_allow_html=True)
         if st.button("ENTER WORKSPACE ➔", key="btn_new", use_container_width=True):
-            st.session_state["active_project"] = {"title": "Untitled Scene", "script": "", "data": None}
+            st.session_state["active_project"] = {"title": "Untitled Sequence", "script": "", "data": None}
             st.session_state["current_view"] = "WORKSPACE"
             st.rerun()
 
-    # CARD 2: SAVED PROJECTS
     with col_h2:
         st.markdown("""
         <div class="funky-card" style="border-color:#ffe600; box-shadow:0 0 20px rgba(255, 230, 0, 0.2);">
             <h1 style="margin:0;">📂</h1>
-            <h3 style="color:#ffe600; margin-top:10px;">SAVED PROJECTS</h3>
-            <p style="color:#94a3b8; font-size:14px;">Access screenplay versions preserved with exact timestamps and breakdowns.</p>
+            <h3 style="color:#ffe600; margin-top:10px;">SAVED VAULT</h3>
+            <p style="color:#94a3b8; font-size:14px;">Screenplays and breakdown matrix preserved with accurate timestamps.</p>
         </div>
         """, unsafe_allow_html=True)
         if st.button("OPEN VAULT ➔", key="btn_saved", use_container_width=True):
             st.session_state["current_view"] = "SAVED"
             st.rerun()
 
-    # CARD 3: EXPORTED PROJECTS
     with col_h3:
         st.markdown("""
         <div class="funky-card" style="border-color:#00f0ff; box-shadow:0 0 20px rgba(0, 240, 255, 0.2);">
             <h1 style="margin:0;">📦</h1>
-            <h3 style="color:#00f0ff; margin-top:10px;">EXPORTED PROJECTS</h3>
-            <p style="color:#94a3b8; font-size:14px;">Download and grab packaged production dossiers and shot sheets.</p>
+            <h3 style="color:#00f0ff; margin-top:10px;">EXPORTED DOSSIERS</h3>
+            <p style="color:#94a3b8; font-size:14px;">Download packaged cinema production kits directly as PDF documents.</p>
         </div>
         """, unsafe_allow_html=True)
-        if st.button("ACCESS DOWNLOADS ➔", key="btn_exported", use_container_width=True):
+        if st.button("ACCESS PDFS ➔", key="btn_exported", use_container_width=True):
             st.session_state["current_view"] = "EXPORTED"
             st.rerun()
 
 # =============================================================
-# 3. WORKSPACE (THE QUANTUM FORGE)
+# 3. WORKSPACE (QUANTUM FORGE)
 # =============================================================
 elif st.session_state["current_view"] == "WORKSPACE":
     if st.button("⬅️ BACK TO COMMAND NEXUS"):
@@ -268,30 +370,30 @@ elif st.session_state["current_view"] == "WORKSPACE":
     col_side, col_main = st.columns([1, 2.5], gap="medium")
     
     with col_side:
-        st.markdown("### 🕹️ CONTROLS & KEYS")
+        st.markdown("### 🕹️ CONTROLS & ENGINE")
         
-        # Auto-detect background API Key
+        # Background Key Integration
         api_key = st.secrets.get("GEMINI_API_KEY", "")
         if api_key:
-            st.markdown("<span class='time-badge' style='color:#00f0ff; border-color:#00f0ff;'>⚡ NEURAL ENGINE: CONNECTED</span>", unsafe_allow_html=True)
+            st.markdown("<span class='time-badge' style='color:#00f0ff; border-color:#00f0ff;'>⚡ NEURAL ENGINE: LINKED & ACTIVE</span>", unsafe_allow_html=True)
         else:
             api_key = st.text_input("GEMINI API KEY (Optional Override)", type="password")
 
         project_title = st.text_input("PROJECT TITLE", value=st.session_state["active_project"]["title"])
         
         script_input = st.text_area(
-            "SCREENPLAY BUFFER (TAMIL / TANGLISH / ENGLISH):",
+            "INPUT STORY PASSAGE / SUMMARY / DIALOGUE:",
             value=st.session_state["active_project"]["script"],
-            height=320,
-            placeholder="Paste raw script here..."
+            height=340,
+            placeholder="Unkitta oru kadhai solra pola normal passage ezhudhunaalum seri, Tanglish or Tamil dialogues potalum seri... Engine idhai Hollywood/Tamil cinema standard script-a mathidum..."
         )
         
-        forge_btn = st.button("⚡ EXECUTE FORGE", use_container_width=True)
-        save_db_btn = st.button("💾 SAVE WITH EXACT TIMESTAMP", use_container_width=True)
+        forge_btn = st.button("⚡ EXECUTE CINEMATEX FORGE", use_container_width=True)
+        save_db_btn = st.button("💾 SAVE WITH TIMESTAMP", use_container_width=True)
 
         if save_db_btn:
             if not script_input.strip():
-                st.warning("Cannot save empty script!")
+                st.warning("Buffer empty! Cannot save.")
             else:
                 ts = get_current_ist_time()
                 try:
@@ -303,31 +405,67 @@ elif st.session_state["current_view"] == "WORKSPACE":
                         "saved_at_formatted": ts,
                         "is_exported": False
                     }).execute()
-                    st.success(f"Preserved at exact time: {ts}")
+                    st.success(f"Project safely preserved at {ts}")
                 except Exception as err:
-                    st.error(f"Save error: {err}")
+                    st.error(f"Database error: {err}")
 
     with col_main:
         st.markdown("### 📊 PRODUCTION MATRIX")
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["⚡ SCENE BEATS", "👤 CHARACTER BIBLE", "🎥 SHOT LIST", "🎨 STORYBOARD CUES", "📦 EXPORT DOSSIER"])
+        tab_script, tab1, tab2, tab3, tab4, tab5 = st.tabs([
+            "📜 INDUSTRY SCREENPLAY",
+            "⚡ SCENE BEATS",
+            "👤 CHARACTER BIBLE",
+            "🎥 SHOT LIST",
+            "🎨 STORYBOARD PROMPTS",
+            "📄 EXPORT PDF DOSSIER"
+        ])
 
         if forge_btn:
             if not api_key:
-                st.error("Please enter your Gemini API Key in the left panel!")
+                st.error("Gemini API Key missing! Check Secrets or input.")
             elif not script_input.strip():
-                st.warning("Buffer empty!")
+                st.warning("Provide a story passage to forge!")
             else:
-                with st.spinner("AI parsing script and forging production assets..."):
+                with st.spinner("Cinematex Neural Engine decomposing narrative & engineering deep production matrix..."):
                     prompt = f"""
-                    Analyze this screenplay (English, Tamil, or Tanglish):
+                    You are an elite cinema director, script doctor, and cinematographer with mastery over both Indian/Tamil cinema (mass-class balance, subtext, high tension) and global Hollywood standards.
+                    Input text (may be casual narrative passage, rough storyline, or dialogues in Tamil, Tanglish, or English):
                     ---
                     {script_input}
                     ---
-                    Strictly return valid JSON:
-                    1. "scene_beats": [ {{"scene_title": "", "emotional_tone": "", "tension": "", "description": ""}} ]
-                    2. "characters": [ {{"name": "", "role": "", "appearance": "", "quirks": ""}} ]
-                    3. "shot_list": [ {{"scene_no": "", "shot_type": "", "camera_angle": "", "sound_cue": ""}} ]
-                    4. "storyboard_prompts": [ "string" ]
+                    YOUR MISSION: Generate deep, highly granular, production-ready cinema intelligence.
+                    
+                    REQUIREMENTS:
+                    1. "formatted_script": Convert the passage into a flawless, industry-standard screenplay format (SLUGLINES e.g. INT. / EXT. - LOCATION - TIME, descriptive visual action paragraphs, CHARACTER NAMES centered in uppercase, parentheticals, sharp dialogue). Preserve the exact emotion, core story essence, and linguistic tone (Tamil/Tanglish/English) of the input.
+                    2. "scene_beats": Highly detailed analysis of story beats. Return a list of items each having:
+                       - "scene_title": Scene identifier
+                       - "emotional_tone": Specific emotional rhythm
+                       - "tension_rating": e.g., "88% Peak Climax"
+                       - "micro_beats": Step-by-step conflict shifts and escalation within the scene
+                       - "director_vision": Director's visual subtext, actor staging notes, and underlying thematic meaning
+                    3. "characters": Deep character breakdown. Return a list of items each having:
+                       - "name": Character name
+                       - "role": Protagonist / Antagonist / Foil
+                       - "appearance": Detailed physical description, costume textures, color palette psychology
+                       - "quirks": Body language nuances, eye contact habits, vocal traits
+                       - "core_conflict": Deep internal emotional struggle vs outer physical obstacle
+                    4. "shot_list": Highly technical cinematic camera list. Return a list of items each having:
+                       - "scene_no": Scene/Shot #
+                       - "shot_type": e.g., "Extreme Low-Angle Dolly In (35mm Anamorphic)"
+                       - "camera_angle": Precise angle & movement (Jib, Pan, Steadicam tracking)
+                       - "lighting_setup": Specific lighting breakdown (Key light, low-key neon rim, volumetric fog, color temperature)
+                       - "sound_cue": Foley textures, sub-bass pulse, dielectric score notes
+                    5. "storyboard_prompts": ULTRA-DETAILED, photorealistic AI image generation prompts optimized for Midjourney v6 and Flux. 
+                       Format each prompt with: Subject detail, framing & camera lens (e.g., 35mm Arri Alexa Mini LF, shallow depth of field), lighting style, environmental atmosphere, cinematic color grade, 8k resolution, photorealistic, cinematic movie still, --ar 16:9.
+
+                    Return STRICT valid JSON only with this schema:
+                    {{
+                        "formatted_script": "string",
+                        "scene_beats": [ {{"scene_title": "", "emotional_tone": "", "tension_rating": "", "micro_beats": "", "director_vision": ""}} ],
+                        "characters": [ {{"name": "", "role": "", "appearance": "", "quirks": "", "core_conflict": ""}} ],
+                        "shot_list": [ {{"scene_no": "", "shot_type": "", "camera_angle": "", "lighting_setup": "", "sound_cue": ""}} ],
+                        "storyboard_prompts": [ "string" ]
+                    }}
                     """
                     client = genai.Client(api_key=api_key)
                     models = ['gemini-3.5-flash-lite', 'gemini-3.7-flash', 'gemini-3.6-flash']
@@ -350,54 +488,91 @@ elif st.session_state["current_view"] == "WORKSPACE":
                         st.session_state["active_project"]["data"] = parsed
                         st.session_state["active_project"]["script"] = script_input
                         st.session_state["active_project"]["title"] = project_title
-                        st.success("FORGE COMPLETE // ASSETS READY")
+                        st.success("CINEMATEX FORGE SUCCESSFUL // ALL MATRICES SYNCHRONIZED")
 
         p_data = st.session_state["active_project"].get("data")
         if p_data:
-            with tab1:
-                for b in p_data.get("scene_beats", []):
-                    st.markdown(f"#### ⚡ {b.get('scene_title')} [{b.get('emotional_tone')}]")
-                    st.write(b.get("description"))
-                    st.divider()
-            with tab2:
-                for c in p_data.get("characters", []):
-                    st.markdown(f"### 👤 {c.get('name')} • `{c.get('role')}`")
-                    st.write(f"**Look:** {c.get('appearance')}")
-                    st.write(f"**Mannerisms & Drive:** {c.get('quirks')}")
-                    st.divider()
-            with tab3:
-                st.dataframe(p_data.get("shot_list", []), use_container_width=True)
-            with tab4:
-                for p in p_data.get("storyboard_prompts", []):
-                    st.code(p)
-            with tab5:
-                st.markdown("### 📥 EXPORT FULL PRODUCTION DOSSIER")
-                # Compile complete dossier string
-                dossier = f"# PRODUCTION DOSSIER: {project_title}\nForged on: {get_current_ist_time()}\n\n"
-                dossier += f"## 1. RAW SCREENPLAY\n{script_input}\n\n"
-                dossier += f"## 2. PRODUCTION BREAKDOWN (JSON)\n{json.dumps(p_data, indent=2)}\n"
+            # TAB 0: SCREENPLAY
+            with tab_script:
+                st.caption("COURIER PRIME CINEMA STANDARD SCREENPLAY:")
+                script_formatted = p_data.get("formatted_script", "Script not ready.")
+                st.markdown(f'<div class="scroll-container"><div class="screenplay-box">{script_formatted}</div></div>', unsafe_allow_html=True)
 
+            # TAB 1: SCENE BEATS
+            with tab1:
+                st.markdown('<div class="scroll-container">', unsafe_allow_html=True)
+                for b in p_data.get("scene_beats", []):
+                    st.markdown(f"""
+                    <div class="cyber-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h4 style="color:#00f0ff; margin:0;">⚡ {b.get('scene_title', 'SCENE')}</h4>
+                            <span class="time-badge">{b.get('emotional_tone')} • TENSION: {b.get('tension_rating')}</span>
+                        </div>
+                        <p style="margin-top:10px; color:#e2e8f0; font-size:15px;"><b>Micro-Beats & Progression:</b><br>{b.get('micro_beats', '')}</p>
+                        <p style="color:#94a3b8; font-size:14px; margin:0;"><b>Director Subtext & Staging:</b> {b.get('director_vision', '')}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            # TAB 2: CHARACTER BIBLE
+            with tab2:
+                st.markdown('<div class="scroll-container">', unsafe_allow_html=True)
+                for c in p_data.get("characters", []):
+                    st.markdown(f"""
+                    <div class="cyber-card cyber-card-alt">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3 style="color:#ff0055; margin:0;">👤 {c.get('name', 'UNKNOWN')}</h3>
+                            <span class="time-badge" style="color:#ff0055; border-color:#ff0055;">{c.get('role', '')}</span>
+                        </div>
+                        <div style="margin-top:8px; font-size:14px;"><b style="color:#00f0ff;">Visual Texture & Costumes:</b> {c.get('appearance', '')}</div>
+                        <div style="margin-top:5px; font-size:14px;"><b style="color:#ffe600;">Mannerisms & Behavioral Quirks:</b> {c.get('quirks', '')}</div>
+                        <div style="margin-top:5px; font-size:14px;"><b style="color:#ff0055;">Internal vs External Conflict:</b> {c.get('core_conflict', '')}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            # TAB 3: SHOT LIST
+            with tab3:
+                st.markdown('<div class="scroll-container">', unsafe_allow_html=True)
+                st.dataframe(p_data.get("shot_list", []), use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            # TAB 4: STORYBOARD PROMPTS (MIDJOURNEY/FLUX)
+            with tab4:
+                st.caption("ULTRA-DETAILED PROMPTS (READY TO COPY INTO MIDJOURNEY V6 / FLUX):")
+                st.markdown('<div class="scroll-container">', unsafe_allow_html=True)
+                for i, p in enumerate(p_data.get("storyboard_prompts", []), 1):
+                    st.markdown(f"**Shot {i} Production Frame:**")
+                    st.code(p, language="text")
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            # TAB 5: EXPORT PDF DOSSIER
+            with tab5:
+                st.markdown("### 📄 DIRECT PDF PRODUCTION DOSSIER")
+                st.write("Full screenplay, narrative architecture, character dossiers, shot lists, and storyboard prompts compiled into an official PDF document.")
+                
+                ts_now = get_current_ist_time()
+                pdf_bytes = generate_dossier_pdf(project_title, script_input, p_data, ts_now)
+                
                 if st.download_button(
-                    label="⬇️ DOWNLOAD DOSSIER (.TXT)",
-                    data=dossier,
-                    file_name=f"{project_title.replace(' ', '_')}_Dossier.txt",
-                    mime="text/plain",
+                    label="⬇️ DOWNLOAD OFFICIAL CINEMATEX DOSSIER (.PDF)",
+                    data=pdf_bytes,
+                    file_name=f"{project_title.replace(' ', '_')}_Cinematex_Dossier.pdf",
+                    mime="application/pdf",
                     use_container_width=True
                 ):
-                    # Flag as exported in database
-                    ts = get_current_ist_time()
                     supabase.table("saved_scripts").insert({
                         "user_id": st.session_state["user"].id,
                         "title": project_title,
                         "script_content": script_input,
                         "parsed_data": p_data,
-                        "saved_at_formatted": ts,
+                        "saved_at_formatted": ts_now,
                         "is_exported": True
                     }).execute()
-                    st.success("Packaged and logged into Exported Projects!")
+                    st.success("PDF exported and archived into Exported Dossiers!")
 
 # =============================================================
-# 4. SAVED PROJECTS VAULT
+# 4. SAVED VAULT
 # =============================================================
 elif st.session_state["current_view"] == "SAVED":
     if st.button("⬅️ BACK TO COMMAND NEXUS"):
@@ -405,13 +580,13 @@ elif st.session_state["current_view"] == "SAVED":
         st.rerun()
 
     st.markdown("<h2 style='font-family:Orbitron; color:#ffe600;'>📂 SAVED PROJECTS VAULT</h2>", unsafe_allow_html=True)
-    st.caption("Screenplays preserved with exact historical timestamps")
+    st.caption("Projects preserved with exact timestamps")
     
     try:
         res = supabase.table("saved_scripts").select("*").eq("user_id", st.session_state["user"].id).order("created_at", desc=True).execute()
         items = res.data or []
         if not items:
-            st.info("No projects saved yet. Create one in the workspace!")
+            st.info("No saved drafts in the vault.")
         else:
             for item in items:
                 col_i1, col_i2 = st.columns([3, 1])
@@ -419,7 +594,7 @@ elif st.session_state["current_view"] == "SAVED":
                     st.markdown(f"### 🎬 {item['title']}")
                     st.markdown(f"<span class='time-badge'>SAVED AT: {item.get('saved_at_formatted', 'N/A')}</span>", unsafe_allow_html=True)
                 with col_i2:
-                    if st.button(f"LOAD PROJECT", key=f"load_{item['id']}"):
+                    if st.button(f"LOAD SEQUENCE", key=f"load_{item['id']}"):
                         st.session_state["active_project"] = {
                             "title": item["title"],
                             "script": item["script_content"],
@@ -429,21 +604,19 @@ elif st.session_state["current_view"] == "SAVED":
                         st.rerun()
                 st.divider()
     except Exception as e:
-        st.error(f"Error reading vault: {e}")
+        st.error(f"Error accessing vault: {e}")
 
 # =============================================================
-# 5. EXPORTED PROJECTS (WITH FADED BACKGROUND TEXT)
+# 5. EXPORTED DOSSIERS (PDF VAULT)
 # =============================================================
 elif st.session_state["current_view"] == "EXPORTED":
     if st.button("⬅️ BACK TO COMMAND NEXUS"):
         st.session_state["current_view"] = "HUB"
         st.rerun()
 
-    # The faded background watermark requested by you:
     st.markdown('<div class="faded-watermark">YOU CAN DOWNLOAD YOUR PROJECT FROM HERE</div>', unsafe_allow_html=True)
-    
-    st.markdown("<h2 style='font-family:Orbitron; color:#00f0ff; position:relative;'>📦 EXPORTED PRODUCTION DOSSIERS</h2>", unsafe_allow_html=True)
-    st.caption("Grab ready-to-use production kits downloaded by your team")
+    st.markdown("<h2 style='font-family:Orbitron; color:#00f0ff; position:relative;'>📦 EXPORTED PDF DOSSIERS</h2>", unsafe_allow_html=True)
+    st.caption("Download packaged PDF production dossiers")
     st.write("")
 
     try:
@@ -451,23 +624,24 @@ elif st.session_state["current_view"] == "EXPORTED":
         exported_items = res.data or []
         
         if not exported_items:
-            st.info("No projects exported yet. Go to Workspace ➔ Export Dossier tab to generate one!")
+            st.info("No projects exported as PDF yet. Head to Workspace ➔ Export PDF Dossier tab!")
         else:
             for item in exported_items:
                 col_e1, col_e2 = st.columns([3, 1])
                 with col_e1:
-                    st.markdown(f"### 📄 {item['title']} - Production Kit")
-                    st.markdown(f"<span class='time-badge'>EXPORT TIMESTAMP: {item.get('saved_at_formatted', 'N/A')}</span>", unsafe_allow_html=True)
+                    st.markdown(f"### 📄 {item['title']} - Cinema PDF Kit")
+                    st.markdown(f"<span class='time-badge'>EXPORTED AT: {item.get('saved_at_formatted', 'N/A')}</span>", unsafe_allow_html=True)
                 with col_e2:
-                    # Re-compile export file
-                    dossier = f"# PRODUCTION DOSSIER: {item['title']}\nExported: {item.get('saved_at_formatted')}\n\n## SCRIPT\n{item['script_content']}\n\n## PARSED DATA\n{json.dumps(item['parsed_data'], indent=2)}"
+                    p_data = item.get('parsed_data', {})
+                    pdf_data = generate_dossier_pdf(item['title'], item['script_content'], p_data, item.get('saved_at_formatted', ''))
                     st.download_button(
-                        label="⬇️ DOWNLOAD AGAIN",
-                        data=dossier,
-                        file_name=f"{item['title'].replace(' ', '_')}_Export.txt",
-                        key=f"dl_{item['id']}",
+                        label="⬇️ DOWNLOAD PDF",
+                        data=pdf_data,
+                        file_name=f"{item['title'].replace(' ', '_')}_Dossier.pdf",
+                        mime="application/pdf",
+                        key=f"dl_pdf_{item['id']}",
                         use_container_width=True
                     )
                 st.divider()
     except Exception as e:
-        st.error(f"Error fetching exports: {e}")
+        st.error(f"Error fetching exported files: {e}")
