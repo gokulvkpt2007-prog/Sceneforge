@@ -149,7 +149,7 @@ def get_current_ist_time():
     return datetime.now(tz).strftime("%d %b %Y • %I:%M:%S %p IST")
 
 # =============================================================
-# 1. FUNKY LOGIN / REGISTER GATEWAY
+# 1. FUNKY LOGIN / REGISTER GATEWAY (CLEAN HUD)
 # =============================================================
 if st.session_state["user"] is None:
     st.write("")
@@ -157,9 +157,8 @@ if st.session_state["user"] is None:
     st.markdown('<div class="funky-subtitle" style="text-align:center;">AUTHENTICATE TO UNLOCK THE CINEMA CYBER-DECK</div>', unsafe_allow_html=True)
     st.write("")
 
-    col_l1, col_center, col_l2 = st.columns([1, 1.3, 1])
+    col_l1, col_center, col_l2 = st.columns([1, 1.4, 1])
     with col_center:
-        st.markdown('<div class="funky-card" style="text-align:left;">', unsafe_allow_html=True)
         auth_mode = st.radio("GATEWAY SELECTOR", ["RETURNING DIRECTOR (LOGIN)", "NEW CREATOR (SIGN UP)"], horizontal=True)
         email = st.text_input("GMAIL / EMAIL", placeholder="director@gmail.com")
         password = st.text_input("SECURITY KEY", type="password", placeholder="••••••••")
@@ -171,7 +170,7 @@ if st.session_state["user"] is None:
                     st.error("Please fill both Email & Password!")
                 else:
                     try:
-                        res = supabase.auth.sign_in_with_password({"email": email, "password": password})
+                        res = supabase.auth.sign_in_with_password({"email": email.strip(), "password": password})
                         st.session_state["user"] = res.user
                         st.session_state["current_view"] = "HUB"
                         st.rerun()
@@ -183,13 +182,15 @@ if st.session_state["user"] is None:
                     st.error("Please provide valid credentials!")
                 else:
                     try:
-                        res = supabase.auth.sign_up({"email": email, "password": password})
-                        st.success("Account successfully created! Switch to LOGIN tab and enter.")
+                        res = supabase.auth.sign_up({"email": email.strip(), "password": password})
+                        if res.user:
+                            st.session_state["user"] = res.user
+                            st.session_state["current_view"] = "HUB"
+                            st.success("Account created & activated! Redirecting...")
+                            st.rerun()
                     except Exception as e:
                         st.error(f"Registration error: {e}")
-        st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
-
 # =============================================================
 # TOP GLOBAL NAVIGATION
 # =============================================================
