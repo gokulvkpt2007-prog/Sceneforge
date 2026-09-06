@@ -20,6 +20,27 @@ st.set_page_config(
 )
 
 # -------------------------------------------------------------
+# CUSTOM CYBER CINEMA FAVICON (SVG DATA-URI)
+# -------------------------------------------------------------
+# Neon cyan anamorphic lens with hot-pink crosshair & amber frame core
+CYBER_FAVICON = """data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="%230b0717"/>
+  <rect x="6" y="6" width="52" height="52" rx="10" fill="none" stroke="%23ff007f" stroke-width="2.5" stroke-dasharray="6,3"/>
+  <circle cx="32" cy="32" r="18" fill="%23120b22" stroke="%2300f0ff" stroke-width="3"/>
+  <circle cx="32" cy="32" r="9" fill="%23ffe600" opacity="0.9"/>
+  <circle cx="32" cy="32" r="4" fill="%23ffffff"/>
+  <path d="M32 10 L32 20 M32 44 L32 54 M10 32 L20 32 M44 32 L54 32" stroke="%2300f0ff" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="48" cy="16" r="3" fill="%23ff007f"/>
+</svg>"""
+
+st.set_page_config(
+    page_title="CINEMATEX // NEURAL CINEMA DECK",
+    page_icon=CYBER_FAVICON,
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+# -------------------------------------------------------------
 # CINEMATEX CYBER-RETRO STYLING & SCROLLBAR ENGINE
 # -------------------------------------------------------------
 st.markdown("""
@@ -258,7 +279,7 @@ def generate_dossier_pdf(title, raw_text, p_data, timestamp):
 # =============================================================
 if st.session_state["user"] is None:
     st.write("")
-    st.markdown('<div class="funky-title" style="text-align:center;"> ) 👾CINEMATEX // ACCESS</div>', unsafe_allow_html=True)
+    st.markdown('<div class="funky-title" style="text-align:center;">) CINEMATEX // ACCESS</div>', unsafe_allow_html=True)
     st.markdown('<div class="funky-subtitle" style="text-align:center;">NEURAL PRE-PRODUCTION ENGINE FOR SCREENWRITERS</div>', unsafe_allow_html=True)
     st.write("")
 
