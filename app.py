@@ -258,7 +258,7 @@ def generate_dossier_pdf(title, raw_text, p_data, timestamp):
 # =============================================================
 if st.session_state["user"] is None:
     st.write("")
-    st.markdown('<div class="funky-title" style="text-align:center;"> ⚡CINEMATEX // ACCESS</div>', unsafe_allow_html=True)
+    st.markdown('<div class="funky-title" style="text-align:center;"> ⚡CINEMATEX </div>', unsafe_allow_html=True)
     st.markdown('<div class="funky-subtitle" style="text-align:center;">NEURAL PRE-PRODUCTION ENGINE FOR SCREENWRITERS</div>', unsafe_allow_html=True)
     st.write("")
 
