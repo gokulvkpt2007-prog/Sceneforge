@@ -1,349 +1,465 @@
 import streamlit as st
 from google import genai
+from supabase import create_client, Client
 import json
 import time
+from datetime import datetime
+import pytz
 
 # -------------------------------------------------------------
 # PAGE CONFIGURATION
 # -------------------------------------------------------------
 st.set_page_config(
-    page_title="SCENEFORGE // PRODUCTION OS",
+    page_title="SCENEFORGE // FUNKY CYBER STUDIO",
     page_icon="⚡",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # -------------------------------------------------------------
-# CYBERPUNK HUD STYLING
+# FUNKY CYBER-RETRO GAMING HUD STYLING
 # -------------------------------------------------------------
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Bungee&family=Orbitron:wght@600;900&family=Rajdhani:wght@600;700&family=JetBrains+Mono:wght@500;700&display=swap');
 
     .stApp {
-        background: radial-gradient(circle at 15% 15%, #0e1220 0%, #06080e 100%) !important;
-        color: #e2e8f0;
+        background: radial-gradient(circle at 10% 10%, #150928 0%, #06050b 100%) !important;
+        color: #f1f5f9;
         font-family: 'Rajdhani', sans-serif;
     }
 
-    .stApp::before {
-        content: " ";
-        display: block;
-        position: fixed;
-        top: 0; left: 0; bottom: 0; right: 0;
-        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 255, 0, 0.02));
-        z-index: 999;
-        background-size: 100% 3px, 6px 100%;
-        pointer-events: none;
-        opacity: 0.5;
-    }
-
-    h1, h2, h3, h4, .cyber-font {
-        font-family: 'Orbitron', monospace !important;
-        letter-spacing: 1.5px;
-        text-transform: uppercase;
-    }
-
-    .hero-glitch {
-        font-family: 'Orbitron', monospace;
-        font-size: 2.2rem;
-        font-weight: 900;
-        background: linear-gradient(90deg, #00f0ff 0%, #ff0055 50%, #ffe600 100%);
+    /* Funky Glowing Typography */
+    .funky-title {
+        font-family: 'Bungee', cursive;
+        font-size: 2.7rem;
+        background: linear-gradient(90deg, #ff007f 0%, #00f0ff 50%, #ffe600 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        text-shadow: 0 0 25px rgba(0, 240, 255, 0.3);
+        text-shadow: 0px 0px 25px rgba(255, 0, 127, 0.4);
+        letter-spacing: 2px;
     }
 
-    .cyber-badge {
-        display: inline-block;
-        padding: 4px 10px;
-        border: 1px solid #00f0ff;
-        background: rgba(0, 240, 255, 0.08);
+    .funky-subtitle {
+        font-family: 'Orbitron', monospace;
         color: #00f0ff;
-        border-radius: 4px;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 1px;
-    }
-    .cyber-badge-magenta {
-        border-color: #ff0055;
-        background: rgba(255, 0, 85, 0.1);
-        color: #ff0055;
+        font-size: 0.95rem;
+        letter-spacing: 2px;
     }
 
-    .auth-box {
-        max-width: 460px;
-        margin: 60px auto;
-        padding: 30px;
-        background: rgba(14, 18, 30, 0.85);
-        border: 1px solid rgba(0, 240, 255, 0.3);
-        border-radius: 12px;
-        box-shadow: 0 0 30px rgba(0, 240, 255, 0.15);
+    /* Ambient Background Watermark Text */
+    .faded-watermark {
+        position: relative;
         text-align: center;
+        font-family: 'Bungee', sans-serif;
+        font-size: 2.8rem;
+        color: rgba(0, 240, 255, 0.04);
+        text-transform: uppercase;
+        letter-spacing: 3px;
+        user-select: none;
+        pointer-events: none;
+        margin-bottom: -40px;
+        margin-top: 10px;
     }
 
-    .cyber-card {
-        background: rgba(14, 18, 30, 0.75);
-        border: 1px solid rgba(0, 240, 255, 0.18);
-        border-left: 4px solid #00f0ff;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(10px);
-        border-radius: 8px;
-        padding: 16px;
-        margin-bottom: 14px;
+    /* Funky Action Cards */
+    .funky-card {
+        background: rgba(22, 16, 42, 0.75);
+        border: 2px solid #ff007f;
+        box-shadow: 0 0 20px rgba(255, 0, 127, 0.25);
+        border-radius: 12px;
+        padding: 24px;
+        text-align: center;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
-    .cyber-card-alt {
-        border-left: 4px solid #ff0055;
+    .funky-card:hover {
+        transform: translateY(-6px) scale(1.02);
+        box-shadow: 0 0 35px rgba(0, 240, 255, 0.5);
+        border-color: #00f0ff;
     }
 
-    .stTextArea textarea {
-        background-color: #090c14 !important;
+    /* Input Buffers */
+    .stTextInput input, .stTextArea textarea {
+        background-color: #0d0818 !important;
         color: #00f0ff !important;
-        border: 1px solid #1e293b !important;
-        border-radius: 6px !important;
+        border: 1.5px solid #2e1e52 !important;
+        border-radius: 8px !important;
         font-family: 'JetBrains Mono', monospace !important;
-        font-size: 14px !important;
+    }
+    .stTextInput input:focus, .stTextArea textarea:focus {
+        border-color: #ff007f !important;
+        box-shadow: 0 0 15px rgba(255, 0, 127, 0.5) !important;
     }
 
-    div.stButton > button:first-child {
-        background: linear-gradient(135deg, #ff0055 0%, #7928ca 100%) !important;
+    /* Funky Buttons */
+    div.stButton > button {
+        background: linear-gradient(135deg, #ff007f 0%, #7928ca 100%) !important;
         color: #ffffff !important;
         font-family: 'Orbitron', monospace !important;
         font-weight: 800 !important;
-        letter-spacing: 1.5px !important;
-        border: 1px solid #ff0055 !important;
-        border-radius: 6px !important;
+        border: 1px solid #ff007f !important;
+        border-radius: 8px !important;
         padding: 10px 20px !important;
-        box-shadow: 0 0 20px rgba(255, 0, 85, 0.4) !important;
+        box-shadow: 0 0 18px rgba(255, 0, 127, 0.4) !important;
+        transition: transform 0.15s ease !important;
+    }
+    div.stButton > button:hover {
+        transform: scale(1.03) !important;
+        box-shadow: 0 0 28px rgba(0, 240, 255, 0.7) !important;
+    }
+
+    /* Status Pill */
+    .time-badge {
+        font-family: 'JetBrains Mono', monospace;
+        color: #ffe600;
+        background: rgba(255, 230, 0, 0.1);
+        border: 1px solid rgba(255, 230, 0, 0.3);
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------------------
-# AUTHENTICATION STATE ENGINE
+# SUPABASE SETUP (Insert credentials here)
 # -------------------------------------------------------------
-if 'authenticated' not in st.session_state:
-    st.session_state['authenticated'] = False
-if 'user_email' not in st.session_state:
-    st.session_state['user_email'] = ""
+SUPABASE_URL = "https://YOUR_SUPABASE_PROJECT_URL.supabase.co"
+SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY"
 
-# -------------------------------------------------------------
-# VIEW 1: GATEWAY LOGIN SCREEN
-# -------------------------------------------------------------
-if not st.session_state['authenticated']:
-    st.markdown("""
-        <div class="auth-box">
-            <div class="hero-glitch" style="font-size:1.8rem; margin-bottom:10px;">⚡ SCENEFORGE</div>
-            <div class="cyber-badge" style="margin-bottom:20px;">SECURITY CLEARANCE REQUIRED</div>
-            <p style="color:#94a3b8; font-size:14px; margin-bottom:20px;">Access the neural pre-production engine with your credentials.</p>
-        </div>
-    """, unsafe_allow_html=True)
+@st.cache_resource
+def get_supabase():
+    try:
+        return create_client(SUPABASE_URL, SUPABASE_KEY)
+    except Exception:
+        return None
 
-    auth_col1, auth_col2, auth_col3 = st.columns([1, 1.2, 1])
-    with auth_col2:
-        email_in = st.text_input("Gmail / User Identifier", placeholder="creator@gmail.com")
-        pass_in = st.text_input("Security Passcode", type="password", placeholder="••••••••")
+supabase: Client = get_supabase()
+
+# Session State Controller
+if "user" not in st.session_state:
+    st.session_state["user"] = None
+if "current_view" not in st.session_state:
+    st.session_state["current_view"] = "HUB"  # HUB, WORKSPACE, SAVED, EXPORTED
+if "active_project" not in st.session_state:
+    st.session_state["active_project"] = {"title": "New Sequence", "script": "", "data": None}
+
+def get_current_ist_time():
+    tz = pytz.timezone('Asia/Kolkata')
+    return datetime.now(tz).strftime("%d %b %Y • %I:%M:%S %p IST")
+
+# =============================================================
+# 1. FUNKY LOGIN / REGISTER GATEWAY
+# =============================================================
+if st.session_state["user"] is None:
+    st.write("")
+    st.markdown('<div class="funky-title" style="text-align:center;">⚡ SCENEFORGE // FUNKY ACCESS</div>', unsafe_allow_html=True)
+    st.markdown('<div class="funky-subtitle" style="text-align:center;">AUTHENTICATE TO UNLOCK THE CINEMA CYBER-DECK</div>', unsafe_allow_html=True)
+    st.write("")
+
+    col_l1, col_center, col_l2 = st.columns([1, 1.3, 1])
+    with col_center:
+        st.markdown('<div class="funky-card" style="text-align:left;">', unsafe_allow_html=True)
+        auth_mode = st.radio("GATEWAY SELECTOR", ["RETURNING DIRECTOR (LOGIN)", "NEW CREATOR (SIGN UP)"], horizontal=True)
+        email = st.text_input("GMAIL / EMAIL", placeholder="director@gmail.com")
+        password = st.text_input("SECURITY KEY", type="password", placeholder="••••••••")
         
-        login_btn = st.button("AUTHENTICATE & ENTER DECK", use_container_width=True)
-        if login_btn:
-            if email_in and pass_in:
-                st.session_state['authenticated'] = True
-                st.session_state['user_email'] = email_in
-                st.rerun()
-            else:
-                st.error("ACCESS DENIED: Enter valid Gmail ID and Passcode.")
+        st.write("")
+        if "LOGIN" in auth_mode:
+            if st.button("🚀 ENTER THE STUDIO", use_container_width=True):
+                if not email or not password:
+                    st.error("Please fill both Email & Password!")
+                else:
+                    try:
+                        res = supabase.auth.sign_in_with_password({"email": email, "password": password})
+                        st.session_state["user"] = res.user
+                        st.session_state["current_view"] = "HUB"
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Login failed: {e}")
+        else:
+            if st.button("✨ FORGE MY CREATOR ACCOUNT", use_container_width=True):
+                if not email or not password:
+                    st.error("Please provide valid credentials!")
+                else:
+                    try:
+                        res = supabase.auth.sign_up({"email": email, "password": password})
+                        st.success("Account successfully created! Switch to LOGIN tab and enter.")
+                    except Exception as e:
+                        st.error(f"Registration error: {e}")
+        st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
 
-# -------------------------------------------------------------
-# VIEW 2: AUTHENTICATED STUDIO WORKSPACE
-# -------------------------------------------------------------
-col_h1, col_h2 = st.columns([2.5, 1])
-with col_h1:
-    st.markdown('<div class="hero-glitch">⚡ SCENEFORGE // PRODUCTION OS</div>', unsafe_allow_html=True)
-    st.markdown(f"""
-        <span class="cyber-badge">OPERATOR: {st.session_state['user_email']}</span>
-        <span class="cyber-badge cyber-badge-magenta" style="margin-left:6px;">TERMINAL ONLINE</span>
-    """, unsafe_allow_html=True)
-
-with col_h2:
-    if st.button("LOGOUT / LOCK DECK"):
-        st.session_state['authenticated'] = False
-        st.session_state['user_email'] = ""
+# =============================================================
+# TOP GLOBAL NAVIGATION
+# =============================================================
+col_nav1, col_nav2, col_nav3 = st.columns([2.5, 2, 1])
+with col_nav1:
+    st.markdown('<div class="funky-title" style="font-size:1.8rem;">⚡ SCENEFORGE</div>', unsafe_allow_html=True)
+with col_nav2:
+    st.markdown(f"<div style='margin-top:12px; font-size:13px; color:#94a3b8;'>CREATOR: <b style='color:#00f0ff;'>{st.session_state['user'].email}</b></div>", unsafe_allow_html=True)
+with col_nav3:
+    if st.button("🚪 LOGOUT", use_container_width=True):
+        supabase.auth.sign_out()
+        st.session_state["user"] = None
+        st.session_state["current_view"] = "HUB"
         st.rerun()
 
-st.divider()
+# =============================================================
+# 2. THE COMMAND NEXUS (THE 3-DOOR HUB)
+# =============================================================
+if st.session_state["current_view"] == "HUB":
+    st.write("")
+    st.markdown("<h2 style='text-align:center; font-family:Orbitron; color:#ffe600;'>⚡ STUDIO COMMAND NEXUS</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center; color:#94a3b8;'>Choose your pre-production trajectory below</p>", unsafe_allow_html=True)
+    st.write("")
 
-# SIDEBAR CONTROLS
-with st.sidebar:
-    st.markdown("### 🕹️ TERMINAL CONTROLS")
-    api_key = st.text_input("GEMINI API KEY", type="password", help="Enter free key from Google AI Studio")
-    st.markdown("""
-        <div style="font-size:12px; color:#64748b; font-family:'JetBrains Mono';">
-            Free Key: <a href="https://aistudio.google.com" target="_blank" style="color:#00f0ff; text-decoration:none;">aistudio.google.com ↗</a>
-        </div>
-    """, unsafe_allow_html=True)
+    col_h1, col_h2, col_h3 = st.columns(3, gap="medium")
     
-    st.divider()
-    st.markdown("### 📂 RETRIEVE SAVED PROJECT")
-    uploaded_file = st.file_uploader("Upload SceneForge JSON File", type=["json"])
-    if uploaded_file is not None:
-        try:
-            saved_data = json.load(uploaded_file)
-            st.session_state['data'] = saved_data
-            st.success("PROJECT RETRIEVED!")
-        except Exception as err:
-            st.error(f"Invalid file: {err}")
+    # CARD 1: CREATE NEW PROJECT
+    with col_h1:
+        st.markdown("""
+        <div class="funky-card">
+            <h1 style="margin:0;">🚀</h1>
+            <h3 style="color:#00f0ff; margin-top:10px;">CREATE NEW PROJECT</h3>
+            <p style="color:#94a3b8; font-size:14px;">Ingest raw screenplays in Tamil, Tanglish, or English to forge production assets.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("ENTER WORKSPACE ➔", key="btn_new", use_container_width=True):
+            st.session_state["active_project"] = {"title": "Untitled Scene", "script": "", "data": None}
+            st.session_state["current_view"] = "WORKSPACE"
+            st.rerun()
 
-# WORKSPACE GRID
-col_in, col_out = st.columns([1.1, 1.3], gap="large")
+    # CARD 2: SAVED PROJECTS
+    with col_h2:
+        st.markdown("""
+        <div class="funky-card" style="border-color:#ffe600; box-shadow:0 0 20px rgba(255, 230, 0, 0.2);">
+            <h1 style="margin:0;">📂</h1>
+            <h3 style="color:#ffe600; margin-top:10px;">SAVED PROJECTS</h3>
+            <p style="color:#94a3b8; font-size:14px;">Access screenplay versions preserved with exact timestamps and breakdowns.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("OPEN VAULT ➔", key="btn_saved", use_container_width=True):
+            st.session_state["current_view"] = "SAVED"
+            st.rerun()
 
-with col_in:
-    st.markdown("### 📥 SCRIPT BUFFER")
-    if st.button("Load Cyber-Crime Sample Script"):
-        st.session_state['demo_script'] = (
-            "SCENE 1: ROYAPETTAH UNDERPASS - NIGHT\n"
-            "Monsoon rain pours down. Neon sign reflects on wet asphalt. "
-            "VIKRAM (30s, faded denim jacket, bruised knuckles) stares at his ticking smartwatch.\n\n"
-            "VIKRAM\n"
-            "(whispering into burner earpiece)\n"
-            "Dei Shiva, delivery spot reach aayiten. Vault encryption unlock aacha illaya?\n\n"
-            "SHIVA (V.O)\n"
-            "Vikram, sensor trigger aayiduchu! Black Scorpio is entering the tunnel right behind you!\n\n"
-            "Sound: Sudden tire screech cuts through rain."
+    # CARD 3: EXPORTED PROJECTS
+    with col_h3:
+        st.markdown("""
+        <div class="funky-card" style="border-color:#00f0ff; box-shadow:0 0 20px rgba(0, 240, 255, 0.2);">
+            <h1 style="margin:0;">📦</h1>
+            <h3 style="color:#00f0ff; margin-top:10px;">EXPORTED PROJECTS</h3>
+            <p style="color:#94a3b8; font-size:14px;">Download and grab packaged production dossiers and shot sheets.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("ACCESS DOWNLOADS ➔", key="btn_exported", use_container_width=True):
+            st.session_state["current_view"] = "EXPORTED"
+            st.rerun()
+
+# =============================================================
+# 3. WORKSPACE (THE QUANTUM FORGE)
+# =============================================================
+elif st.session_state["current_view"] == "WORKSPACE":
+    if st.button("⬅️ BACK TO COMMAND NEXUS"):
+        st.session_state["current_view"] = "HUB"
+        st.rerun()
+
+    col_side, col_main = st.columns([1, 2.5], gap="medium")
+    
+    with col_side:
+        st.markdown("### 🕹️ CONTROLS & KEYS")
+        api_key = st.text_input("GEMINI API KEY", type="password", help="Enter free key from Google AI Studio")
+        project_title = st.text_input("PROJECT TITLE", value=st.session_state["active_project"]["title"])
+        
+        script_input = st.text_area(
+            "SCREENPLAY BUFFER (TAMIL / TANGLISH / ENGLISH):",
+            value=st.session_state["active_project"]["script"],
+            height=320,
+            placeholder="Paste raw script here..."
         )
+        
+        forge_btn = st.button("⚡ EXECUTE FORGE", use_container_width=True)
+        save_db_btn = st.button("💾 SAVE WITH EXACT TIMESTAMP", use_container_width=True)
 
-    script_input = st.text_area(
-        "PASTE SCREENPLAY (Tamil / Tanglish / English):",
-        value=st.session_state.get('demo_script', ''),
-        height=350,
-        placeholder="Drop raw script here..."
-    )
+        if save_db_btn:
+            if not script_input.strip():
+                st.warning("Cannot save empty script!")
+            else:
+                ts = get_current_ist_time()
+                try:
+                    supabase.table("saved_scripts").insert({
+                        "user_id": st.session_state["user"].id,
+                        "title": project_title,
+                        "script_content": script_input,
+                        "parsed_data": st.session_state["active_project"].get("data", {}),
+                        "saved_at_formatted": ts,
+                        "is_exported": False
+                    }).execute()
+                    st.success(f"Preserved at exact time: {ts}")
+                except Exception as err:
+                    st.error(f"Save error: {err}")
 
-    analyze_btn = st.button("⚡ EXECUTE NEURAL FORGE", use_container_width=True)
+    with col_main:
+        st.markdown("### 📊 PRODUCTION MATRIX")
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["⚡ SCENE BEATS", "👤 CHARACTER BIBLE", "🎥 SHOT LIST", "🎨 STORYBOARD CUES", "📦 EXPORT DOSSIER"])
 
-with col_out:
-    st.markdown("### 📊 PRODUCTION ASSETS")
-    tab1, tab2, tab3, tab4 = st.tabs(["⚡ SCENE BEATS", "👤 CHARACTER BIBLE", "🎥 SHOT LIST", "🎨 STORYBOARD CUES"])
-
-    if analyze_btn:
-        if not api_key:
-            st.error("KEY REQUIRED: Paste your Gemini API Key in the left sidebar!")
-        elif not script_input.strip():
-            st.warning("BUFFER EMPTY: Provide script text first.")
-        else:
-            with st.spinner("QUANTUM FORGE ACTIVE: Synthesizing production breakdown..."):
-                prompt = f"""
-                You are an expert film pre-production assistant.
-                Analyze this story or screenplay (English, Tamil, or Tanglish):
-                ---
-                {script_input}
-                ---
-                Strictly return a valid JSON object with these 4 keys:
-                1. "scene_beats": List of objects with:
-                   - "scene_title"
-                   - "emotional_tone"
-                   - "tension_rating"
-                   - "description"
-                2. "characters": List of objects with:
-                   - "name"
-                   - "role"
-                   - "appearance"
-                   - "quirks"
-                3. "shot_list": List of objects with:
-                   - "scene_no"
-                   - "shot_type"
-                   - "camera_angle"
-                   - "sound_cue"
-                4. "storyboard_prompts": List of detailed Midjourney/Flux visual strings.
-                Output ONLY raw, valid JSON.
-                """
-
-                client = genai.Client(api_key=api_key)
-                models_to_try = [
-                    'gemini-3.5-flash-lite',
-                    'gemini-3.7-flash',
-                    'gemini-3.6-flash',
-                    'gemini-3.5-flash'
-                ]
-
-                response = None
-                last_error = None
-
-                for model_name in models_to_try:
-                    for attempt in range(2):
+        if forge_btn:
+            if not api_key:
+                st.error("Please enter your Gemini API Key in the left panel!")
+            elif not script_input.strip():
+                st.warning("Buffer empty!")
+            else:
+                with st.spinner("AI parsing script and forging production assets..."):
+                    prompt = f"""
+                    Analyze this screenplay (English, Tamil, or Tanglish):
+                    ---
+                    {script_input}
+                    ---
+                    Strictly return valid JSON:
+                    1. "scene_beats": [ {{"scene_title": "", "emotional_tone": "", "tension": "", "description": ""}} ]
+                    2. "characters": [ {{"name": "", "role": "", "appearance": "", "quirks": ""}} ]
+                    3. "shot_list": [ {{"scene_no": "", "shot_type": "", "camera_angle": "", "sound_cue": ""}} ]
+                    4. "storyboard_prompts": [ "string" ]
+                    """
+                    client = genai.Client(api_key=api_key)
+                    models = ['gemini-3.5-flash-lite', 'gemini-3.7-flash', 'gemini-3.6-flash']
+                    res = None
+                    for m in models:
                         try:
                             res = client.models.generate_content(
-                                model=model_name,
+                                model=m,
                                 contents=prompt,
                                 config={'response_mime_type': 'application/json'}
                             )
                             if res and res.text:
-                                response = res
                                 break
-                        except Exception as e:
-                            last_error = e
-                            time.sleep(2)
-                    if response:
-                        break
+                        except Exception:
+                            time.sleep(1)
 
-                if response and response.text:
-                    try:
-                        clean_text = response.text.strip()
-                        if clean_text.startswith("```json"):
-                            clean_text = clean_text[7:]
-                        if clean_text.endswith("```"):
-                            clean_text = clean_text[:-3]
-                        data = json.loads(clean_text)
-                        st.session_state['data'] = data
-                        st.success("FORGE COMPLETE // DATA READY")
-                    except Exception as parse_err:
-                        st.error(f"JSON Error: {parse_err}")
-                else:
-                    st.error(f"Execution Error: {last_error}")
+                    if res and res.text:
+                        clean_json = res.text.strip().replace("```json", "").replace("```", "")
+                        parsed = json.loads(clean_json)
+                        st.session_state["active_project"]["data"] = parsed
+                        st.session_state["active_project"]["script"] = script_input
+                        st.session_state["active_project"]["title"] = project_title
+                        st.success("FORGE COMPLETE // ASSETS READY")
 
-    # RENDER DATA & SAVE BUTTON
-    if 'data' in st.session_state:
-        d = st.session_state['data']
+        p_data = st.session_state["active_project"].get("data")
+        if p_data:
+            with tab1:
+                for b in p_data.get("scene_beats", []):
+                    st.markdown(f"#### ⚡ {b.get('scene_title')} [{b.get('emotional_tone')}]")
+                    st.write(b.get("description"))
+                    st.divider()
+            with tab2:
+                for c in p_data.get("characters", []):
+                    st.markdown(f"### 👤 {c.get('name')} • `{c.get('role')}`")
+                    st.write(f"**Look:** {c.get('appearance')}")
+                    st.write(f"**Mannerisms & Drive:** {c.get('quirks')}")
+                    st.divider()
+            with tab3:
+                st.dataframe(p_data.get("shot_list", []), use_container_width=True)
+            with tab4:
+                for p in p_data.get("storyboard_prompts", []):
+                    st.code(p)
+            with tab5:
+                st.markdown("### 📥 EXPORT FULL PRODUCTION DOSSIER")
+                # Compile complete dossier string
+                dossier = f"# PRODUCTION DOSSIER: {project_title}\nForged on: {get_current_ist_time()}\n\n"
+                dossier += f"## 1. RAW SCREENPLAY\n{script_input}\n\n"
+                dossier += f"## 2. PRODUCTION BREAKDOWN (JSON)\n{json.dumps(p_data, indent=2)}\n"
 
-        # SAVE/EXPORT PROJECT FILE
-        json_string = json.dumps(d, indent=4)
-        st.download_button(
-            label="💾 SAVE & EXPORT PROJECT FILE (.JSON)",
-            file_name="sceneforge_production_assets.json",
-            mime="application/json",
-            data=json_string,
-            use_container_width=True
-        )
+                if st.download_button(
+                    label="⬇️ DOWNLOAD DOSSIER (.TXT)",
+                    data=dossier,
+                    file_name=f"{project_title.replace(' ', '_')}_Dossier.txt",
+                    mime="text/plain",
+                    use_container_width=True
+                ):
+                    # Flag as exported in database
+                    ts = get_current_ist_time()
+                    supabase.table("saved_scripts").insert({
+                        "user_id": st.session_state["user"].id,
+                        "title": project_title,
+                        "script_content": script_input,
+                        "parsed_data": p_data,
+                        "saved_at_formatted": ts,
+                        "is_exported": True
+                    }).execute()
+                    st.success("Packaged and logged into Exported Projects!")
 
-        with tab1:
-            for s in d.get("scene_beats", []):
-                st.markdown(f"""
-                <div class="cyber-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h4 style="color:#00f0ff; margin:0;">{s.get('scene_title', 'SCENE')}</h4>
-                        <span class="cyber-badge">{s.get('emotional_tone', 'TENSE')} | {s.get('tension_rating', '80%')}</span>
-                    </div>
-                    <p style="margin-top:8px; color:#cbd5e1;">{s.get('description', '')}</p>
-                </div>
-                """, unsafe_allow_html=True)
+# =============================================================
+# 4. SAVED PROJECTS VAULT
+# =============================================================
+elif st.session_state["current_view"] == "SAVED":
+    if st.button("⬅️ BACK TO COMMAND NEXUS"):
+        st.session_state["current_view"] = "HUB"
+        st.rerun()
 
-        with tab2:
-            for c in d.get("characters", []):
-                st.markdown(f"""
-                <div class="cyber-card cyber-card-alt">
-                    <h3 style="color:#ff0055; margin:0;">👤 {c.get('name', 'UNKNOWN')}</h3>
-                    <div style="font-size:14px; color:#94a3b8; margin-top:6px;">ROLE: <b style="color:#f8fafc;">{c.get('role', 'N/A')}</b></div>
-                    <div style="font-size:14px; color:#94a3b8; margin-top:4px;">LOOK: <span style="color:#e2e8f0;">{c.get('appearance', '')}</span></div>
-                    <div style="font-size:14px; color:#94a3b8; margin-top:4px;">DRIVE: <span style="color:#e2e8f0;">{c.get('quirks', '')}</span></div>
-                </div>
-                """, unsafe_allow_html=True)
+    st.markdown("<h2 style='font-family:Orbitron; color:#ffe600;'>📂 SAVED PROJECTS VAULT</h2>", unsafe_allow_html=True)
+    st.caption("Screenplays preserved with exact historical timestamps")
+    
+    try:
+        res = supabase.table("saved_scripts").select("*").eq("user_id", st.session_state["user"].id).order("created_at", desc=True).execute()
+        items = res.data or []
+        if not items:
+            st.info("No projects saved yet. Create one in the workspace!")
+        else:
+            for item in items:
+                col_i1, col_i2 = st.columns([3, 1])
+                with col_i1:
+                    st.markdown(f"### 🎬 {item['title']}")
+                    st.markdown(f"<span class='time-badge'>SAVED AT: {item.get('saved_at_formatted', 'N/A')}</span>", unsafe_allow_html=True)
+                with col_i2:
+                    if st.button(f"LOAD PROJECT", key=f"load_{item['id']}"):
+                        st.session_state["active_project"] = {
+                            "title": item["title"],
+                            "script": item["script_content"],
+                            "data": item["parsed_data"]
+                        }
+                        st.session_state["current_view"] = "WORKSPACE"
+                        st.rerun()
+                st.divider()
+    except Exception as e:
+        st.error(f"Error reading vault: {e}")
 
-        with tab3:
-            st.markdown('<div class="cyber-card">', unsafe_allow_html=True)
-            st.dataframe(d.get("shot_list", []), use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+# =============================================================
+# 5. EXPORTED PROJECTS (WITH FADED BACKGROUND TEXT)
+# =============================================================
+elif st.session_state["current_view"] == "EXPORTED":
+    if st.button("⬅️ BACK TO COMMAND NEXUS"):
+        st.session_state["current_view"] = "HUB"
+        st.rerun()
 
-        with tab4:
-            for p in d.get("storyboard_prompts", []):
-                st.code(p, language="text")
+    # The faded background watermark requested by you:
+    st.markdown('<div class="faded-watermark">YOU CAN DOWNLOAD YOUR PROJECT FROM HERE</div>', unsafe_allow_html=True)
+    
+    st.markdown("<h2 style='font-family:Orbitron; color:#00f0ff; position:relative;'>📦 EXPORTED PRODUCTION DOSSIERS</h2>", unsafe_allow_html=True)
+    st.caption("Grab ready-to-use production kits downloaded by your team")
+    st.write("")
+
+    try:
+        res = supabase.table("saved_scripts").select("*").eq("user_id", st.session_state["user"].id).eq("is_exported", True).order("created_at", desc=True).execute()
+        exported_items = res.data or []
+        
+        if not exported_items:
+            st.info("No projects exported yet. Go to Workspace ➔ Export Dossier tab to generate one!")
+        else:
+            for item in exported_items:
+                col_e1, col_e2 = st.columns([3, 1])
+                with col_e1:
+                    st.markdown(f"### 📄 {item['title']} - Production Kit")
+                    st.markdown(f"<span class='time-badge'>EXPORT TIMESTAMP: {item.get('saved_at_formatted', 'N/A')}</span>", unsafe_allow_html=True)
+                with col_e2:
+                    # Re-compile export file
+                    dossier = f"# PRODUCTION DOSSIER: {item['title']}\nExported: {item.get('saved_at_formatted')}\n\n## SCRIPT\n{item['script_content']}\n\n## PARSED DATA\n{json.dumps(item['parsed_data'], indent=2)}"
+                    st.download_button(
+                        label="⬇️ DOWNLOAD AGAIN",
+                        data=dossier,
+                        file_name=f"{item['title'].replace(' ', '_')}_Export.txt",
+                        key=f"dl_{item['id']}",
+                        use_container_width=True
+                    )
+                st.divider()
+    except Exception as e:
+        st.error(f"Error fetching exports: {e}")
