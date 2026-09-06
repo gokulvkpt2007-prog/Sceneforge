@@ -14,7 +14,7 @@ import io
 # -------------------------------------------------------------
 st.set_page_config(
     page_title="CINEMATEX // NEURAL CINEMA DECK",
-    page_icon="🎬",
+    page_icon="👾",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -165,8 +165,8 @@ st.markdown("""
 # -------------------------------------------------------------
 # SUPABASE CONNECTION CONFIG
 # -------------------------------------------------------------
-SUPABASE_URL = "https://YOUR_SUPABASE_PROJECT_URL.supabase.co"
-SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY"
+SUPABASE_URL = "https://xiicgxqmmrvvvgdvkbej.supabase.co"
+SUPABASE_KEY = "sb_publishable_l3TcwbLc7Dm9X-Ji-7bJdw_M0ey36-8"
 
 @st.cache_resource
 def get_supabase():
