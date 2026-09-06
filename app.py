@@ -189,67 +189,69 @@ def get_current_ist_time():
     return datetime.now(tz).strftime("%d %b %Y • %I:%M:%S %p IST")
 
 # -------------------------------------------------------------
-# ROBUST PDF GENERATOR ENGINE
+# SAFE UNICODE PDF GENERATOR ENGINE
 # -------------------------------------------------------------
+def safe_pdf_text(text):
+    if not text:
+        return ""
+    # Remove unsupported characters & convert to standard ASCII safely
+    return str(text).encode('ascii', 'ignore').decode('ascii')
+
 def generate_dossier_pdf(title, raw_text, p_data, timestamp):
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
     
     # Title & Header
-    pdf.set_font("Helvetica", 'B', 20)
-    pdf.cell(0, 12, "CINEMATEX PRODUCTION DOSSIER", ln=True, align="C")
-    pdf.set_font("Helvetica", 'I', 11)
-    pdf.cell(0, 8, f"Project: {title} | Forged: {timestamp}", ln=True, align="C")
-    pdf.ln(8)
+    pdf.set_font("Helvetica", 'B', 18)
+    pdf.cell(0, 12, safe_pdf_text("CINEMATEX PRODUCTION DOSSIER"), ln=True, align="C")
+    pdf.set_font("Helvetica", 'I', 10)
+    pdf.cell(0, 8, safe_pdf_text(f"Project: {title} | Forged: {timestamp}"), ln=True, align="C")
+    pdf.ln(6)
     
     # 1. Screenplay
-    pdf.set_font("Helvetica", 'B', 14)
-    pdf.cell(0, 10, "1. INDUSTRY FORMATTED SCREENPLAY", ln=True)
-    pdf.set_font("Courier", '', 10)
+    pdf.set_font("Helvetica", 'B', 13)
+    pdf.cell(0, 10, safe_pdf_text("1. INDUSTRY FORMATTED SCREENPLAY"), ln=True)
+    pdf.set_font("Courier", '', 9)
     script_content = p_data.get("formatted_script", "No script data.")
-    # Sanitize characters for standard PDF fonts
-    clean_script = script_content.encode('latin-1', 'replace').decode('latin-1')
-    pdf.multi_cell(0, 6, clean_script)
-    pdf.ln(10)
+    pdf.multi_cell(0, 5, safe_pdf_text(script_content))
+    pdf.ln(6)
     
     # 2. Scene Beats
-    pdf.set_font("Helvetica", 'B', 14)
-    pdf.cell(0, 10, "2. SCENE BEATS & NARRATIVE ARCHITECTURE", ln=True)
-    pdf.set_font("Helvetica", '', 10)
+    pdf.set_font("Helvetica", 'B', 13)
+    pdf.cell(0, 10, safe_pdf_text("2. SCENE BEATS & NARRATIVE ARCHITECTURE"), ln=True)
     for b in p_data.get("scene_beats", []):
         t_title = f"- {b.get('scene_title', 'Scene')} [Tone: {b.get('emotional_tone')} | Tension: {b.get('tension_rating')}]"
         pdf.set_font("Helvetica", 'B', 10)
-        pdf.cell(0, 7, t_title.encode('latin-1', 'replace').decode('latin-1'), ln=True)
+        pdf.cell(0, 6, safe_pdf_text(t_title), ln=True)
         pdf.set_font("Helvetica", '', 9)
-        pdf.multi_cell(0, 5, f"Progression: {b.get('micro_beats', '')}".encode('latin-1', 'replace').decode('latin-1'))
-        pdf.multi_cell(0, 5, f"Director Staging: {b.get('director_vision', '')}".encode('latin-1', 'replace').decode('latin-1'))
-        pdf.ln(3)
-    pdf.ln(8)
+        pdf.multi_cell(0, 5, safe_pdf_text(f"Progression: {b.get('micro_beats', '')}"))
+        pdf.multi_cell(0, 5, safe_pdf_text(f"Director Staging: {b.get('director_vision', '')}"))
+        pdf.ln(2)
+    pdf.ln(6)
 
     # 3. Character Bible
-    pdf.set_font("Helvetica", 'B', 14)
-    pdf.cell(0, 10, "3. CHARACTER PSYCHOLOGY & BIBLE", ln=True)
+    pdf.set_font("Helvetica", 'B', 13)
+    pdf.cell(0, 10, safe_pdf_text("3. CHARACTER PSYCHOLOGY & BIBLE"), ln=True)
     for c in p_data.get("characters", []):
         pdf.set_font("Helvetica", 'B', 10)
-        pdf.cell(0, 7, f"- {c.get('name', '')} ({c.get('role', '')})".encode('latin-1', 'replace').decode('latin-1'), ln=True)
+        pdf.cell(0, 6, safe_pdf_text(f"- {c.get('name', '')} ({c.get('role', '')})"), ln=True)
         pdf.set_font("Helvetica", '', 9)
-        pdf.multi_cell(0, 5, f"Visual & Attire: {c.get('appearance', '')}".encode('latin-1', 'replace').decode('latin-1'))
-        pdf.multi_cell(0, 5, f"Mannerisms: {c.get('quirks', '')}".encode('latin-1', 'replace').decode('latin-1'))
-        pdf.multi_cell(0, 5, f"Core Conflict: {c.get('core_conflict', '')}".encode('latin-1', 'replace').decode('latin-1'))
-        pdf.ln(3)
-    pdf.ln(8)
+        pdf.multi_cell(0, 5, safe_pdf_text(f"Visual & Attire: {c.get('appearance', '')}"))
+        pdf.multi_cell(0, 5, safe_pdf_text(f"Mannerisms: {c.get('quirks', '')}"))
+        pdf.multi_cell(0, 5, safe_pdf_text(f"Core Conflict: {c.get('core_conflict', '')}"))
+        pdf.ln(2)
+    pdf.ln(6)
 
     # 4. Storyboard Prompts
-    pdf.set_font("Helvetica", 'B', 14)
-    pdf.cell(0, 10, "4. DETAILED STORYBOARD PROMPTS (MIDJOURNEY / FLUX)", ln=True)
-    pdf.set_font("Helvetica", '', 9)
+    pdf.set_font("Helvetica", 'B', 13)
+    pdf.cell(0, 10, safe_pdf_text("4. DETAILED STORYBOARD PROMPTS (MIDJOURNEY / FLUX)"), ln=True)
     for idx, p in enumerate(p_data.get("storyboard_prompts", []), 1):
         pdf.set_font("Helvetica", 'B', 9)
-        pdf.cell(0, 6, f"Frame {idx} Prompt:", ln=True)
+        pdf.cell(0, 6, safe_pdf_text(f"Frame {idx} Prompt:"), ln=True)
         pdf.set_font("Helvetica", 'I', 8)
-        pdf.multi_cell(0, 5, p.encode('latin-1', 'replace').decode('latin-1'))
-        pdf.ln(3)
+        pdf.multi_cell(0, 5, safe_pdf_text(p))
+        pdf.ln(2)
 
     return bytes(pdf.output())
 
