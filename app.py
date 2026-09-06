@@ -124,8 +124,8 @@ st.markdown("""
 # -------------------------------------------------------------
 # SUPABASE SETUP (Insert credentials here)
 # -------------------------------------------------------------
-SUPABASE_URL = "https://YOUR_SUPABASE_PROJECT_URL.supabase.co"
-SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY"
+SUPABASE_URL = "https://xiicgxqmmrvvvgdvkbej.supabase.co"
+SUPABASE_KEY = "sb_publishable_l3TcwbLc7Dm9X-Ji-7bJdw_M0ey36-8"
 
 @st.cache_resource
 def get_supabase():
