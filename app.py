@@ -188,24 +188,35 @@ with col_out:
                 Output ONLY valid JSON.
                 """
 
-                client = genai.Client(api_key=api_key)
-                # Failover sequence: 3.5-flash-lite (fast) -> 3.8-flash -> 3.6-flash
-                models_to_try = ['gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-3.6-flash']
+        client = genai.Client(api_key=api_key)
+                import time
+
+                # Rock-solid priority chain
+                models_to_try = [
+                    'gemini-2.0-flash',
+                    'gemini-1.5-flash',
+                    'gemini-3.5-flash-lite',
+                    'gemini-2.0-flash-lite'
+                ]
+                
                 response = None
                 last_error = None
 
                 for m in models_to_try:
-                    try:
-                        response = client.models.generate_content(
-                            model=m,
-                            contents=prompt,
-                            config={'response_mime_type': 'application/json'}
-                        )
-                        if response and response.text:
-                            break
-                    except Exception as e:
-                        last_error = e
-                        continue
+                    for attempt in range(2):
+                        try:
+                            response = client.models.generate_content(
+                                model=m,
+                                contents=prompt,
+                                config={'response_mime_type': 'application/json'}
+                            )
+                            if response and response.text:
+                                break
+                        except Exception as e:
+                            last_error = e
+                            time.sleep(2)  # Wait 2 seconds for server queue to clear
+                    if response and response.text:
+                        break
 
                 if response and response.text:
                     try:
