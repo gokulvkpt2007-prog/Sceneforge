@@ -269,7 +269,14 @@ elif st.session_state["current_view"] == "WORKSPACE":
     
     with col_side:
         st.markdown("### 🕹️ CONTROLS & KEYS")
-        api_key = st.text_input("GEMINI API KEY", type="password", help="Enter free key from Google AI Studio")
+        
+        # Auto-detect background API Key
+        api_key = st.secrets.get("GEMINI_API_KEY", "")
+        if api_key:
+            st.markdown("<span class='time-badge' style='color:#00f0ff; border-color:#00f0ff;'>⚡ NEURAL ENGINE: CONNECTED</span>", unsafe_allow_html=True)
+        else:
+            api_key = st.text_input("GEMINI API KEY (Optional Override)", type="password")
+
         project_title = st.text_input("PROJECT TITLE", value=st.session_state["active_project"]["title"])
         
         script_input = st.text_area(
