@@ -259,43 +259,59 @@ def generate_dossier_pdf(title, raw_text, p_data, timestamp):
     pdf.multi_cell(content_w, 5, safe_pdf_text(script_content))
     pdf.ln(6)
     return bytes(pdf.output())
-
+    
 # -------------------------------------------------------------
-# MANUAL SCREENPLAY SYNTAX ANALYZER
+# STRICT HOLLYWOOD/CINEMA SCREENPLAY SYNTAX ANALYZER
 # -------------------------------------------------------------
-UNFILMABLE_THOUGHT_TRIGGERS = [
-    r'\bfeels?\b', r'\bthinking\b', r'\bthinks?\b', r'\bremembers?\b',
-    r'\bwonders?\b', r'\bhopes?\b', r'\bknows?\b', r'\bregrets?\b',
-    r'\bguilty\b', r'\bconfused\b', r'\bloves?\b'
-]
-
-def analyze_screenplay_line(line):
+def analyze_screenplay_line(line, prev_line_type="EMPTY"):
     raw = line.strip()
     if not raw:
-        return True, "EMPTY", "Empty line separator"
+        return True, "EMPTY", ""
 
-    # Sluglines
+    # 1. Standard Slugline (Must start with INT. or EXT.)
     if re.match(r'^(INT\.|EXT\.|INT\./EXT\.)\s+[A-Z0-9\s\-\.\/\'\"]+', raw):
-        return True, "SLUGLINE", "Valid Industry Scene Heading"
+        return True, "SLUGLINE", "Valid Scene Heading"
 
-    # Character Cue (Uppercase 1-3 words)
-    if raw.isupper() and len(raw.split()) <= 4 and not raw.endswith("."):
-        return True, "CHARACTER", "Standard Character Cue"
+    # Flag fake/lazy sluglines
+    if any(raw.upper().startswith(p) for p in ["INT ", "EXT ", "SCENE ", "OPENING ", "SHOT "]):
+        return False, "INVALID_SLUGLINE", "Invalid Slugline! Must strictly start with INT. or EXT. (e.g., INT. HOUSE - NIGHT)"
 
-    # Parentheticals
+    # 2. Strict Character Cue (Must be purely UPPERCASE, <= 3 words, no punctuation)
+    if raw.isupper() and len(raw.split()) <= 4 and not any(char in raw for char in [".", ",", ":", ";", "!", "?"]):
+        return True, "CHARACTER", "Valid Character Heading"
+
+    # 3. Parenthetical directive (whispering)
     if raw.startswith("(") and raw.endswith(")"):
-        return True, "PARENTHETICAL", "Valid Actor Direction"
+        return True, "PARENTHETICAL", "Valid Actor Cue"
 
-    # Action lines: Flag unfilmable thoughts
-    for trig in UNFILMABLE_THOUGHT_TRIGGERS:
+    # 4. RED FLAG: Novel/Conversational Passage Dialogue in Quotes
+    # e.g., ava kitta "Teja enga" nu kekuran / "arivu illa..." nu kathuran
+    if '"' in raw or "'" in raw:
+        return False, "NOVEL_DIALOGUE", "Novel format detected! Screenplay dialogues cannot be embedded in quotes inside action paragraphs. Put Character Name in UPPERCASE above, then Dialogue below."
+
+    # 5. RED FLAG: Casual dialogue markers
+    if re.search(r'\b(nu solra|nu kekuran|nu kathuran|solran|kekra)\b', raw, re.IGNORECASE):
+        return False, "CASUAL_PASSAGE", "Conversational storytelling detected. Format into Character Cue followed by dialogue line."
+
+    # 6. Valid Dialogue Line (Only allowed immediately below CHARACTER or PARENTHETICAL)
+    if prev_line_type in ["CHARACTER", "PARENTHETICAL"]:
+        return True, "DIALOGUE", "Valid Dialogue Line"
+
+    # 7. Visual Action Line (Must not have first-person / meta crew talk)
+    if re.search(r'\b(open agudhu|revel panrom|pakrom|camera angle)\b', raw, re.IGNORECASE):
+        return False, "DIRECTOR_COMMENTARY", "Don't write director talk ('revel panrom', 'camera angle'). Write what the camera sees physically."
+
+    # 8. Unfilmable mental thoughts check
+    unfilmable_words = [r'\bfeels?\b', r'\bthinking\b', r'\bthinks?\b', r'\bremembers?\b', r'\bguilty\b']
+    for trig in unfilmable_words:
         if re.search(trig, raw, re.IGNORECASE):
-            return False, "UNFILMABLE_THOUGHT", f"Unfilmable thought detected ('{trig.replace(chr(92)+'b','')}'). Camera cannot photograph mental feelings!"
+            return False, "UNFILMABLE", "Unfilmable thought detected. Camera cannot film internal mind feelings."
 
-    # Lowercase single-word starting sluglines
-    if any(raw.upper().startswith(p) for p in ["INT ", "EXT ", "SCENE "]):
-        return False, "INVALID_SLUGLINE", "Invalid Scene Heading. Must use INT. or EXT. with period!"
+    # If it is just a normal sentence without sluglines or dialogue structure in a screenplay block:
+    if len(raw.split()) > 15:
+        return False, "RUNON_PARAGRAPH", "Action paragraph too dense. Screenplay action blocks must be short, punchy 1-2 visual lines."
 
-    return True, "ACTION_OR_DIALOGUE", "Valid Action / Dialogue Line"
+    return True, "ACTION", "Valid Action Line"
 
 # -------------------------------------------------------------
 # MASTERCLASS LESSONS LIST
@@ -577,13 +593,19 @@ elif st.session_state["current_view"] == "MANUAL_IDE":
     with col_preview:
         st.markdown("### 🖥️ LIVE SYNTAX CHECKER HUD")
         
-        lines = typed_script.split("\n")
+  lines = typed_script.split("\n")
         rendered_html = ['<div class="manual-screen-dark scroll-container">']
         error_count = 0
         error_details = []
+        last_type = "EMPTY"
 
         for idx, line in enumerate(lines, 1):
-            is_valid, tag, msg = analyze_screenplay_line(line)
+            is_valid, tag, msg = analyze_screenplay_line(line, last_type)
+            if line.strip():
+                last_type = tag
+            else:
+                last_type = "EMPTY"
+
             escaped_line = line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             
             if not line.strip():
@@ -593,7 +615,7 @@ elif st.session_state["current_view"] == "MANUAL_IDE":
             else:
                 error_count += 1
                 error_details.append((idx, line, msg))
-                rendered_html.append(f'<span class="code-line-red"><b>[L{idx}]</b> {escaped_line} <span style="font-size:10px; color:#ffb3c6;">&lt;-- {msg}</span></span>')
+                rendered_html.append(f'<span class="code-line-red"><b>[L{idx}]</b> {escaped_line} <br><span style="font-size:10.5px; color:#ffb3c6; font-family:sans-serif;">⚠️ {msg}</span></span>')
 
         rendered_html.append('</div>')
         st.markdown("".join(rendered_html), unsafe_allow_html=True)
