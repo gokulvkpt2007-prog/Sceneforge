@@ -40,7 +40,6 @@ st.markdown("""
         letter-spacing: 2px;
     }
 
-    /* Big Hero Learning Card */
     .hero-learn-card {
         background: linear-gradient(135deg, rgba(32, 14, 66, 0.9) 0%, rgba(13, 8, 28, 0.95) 100%);
         border: 2px solid #a855f7;
@@ -55,7 +54,6 @@ st.markdown("""
         box-shadow: 0 0 35px rgba(0, 240, 255, 0.5);
     }
 
-    /* Sub Action Cards */
     .mini-card {
         background: rgba(18, 12, 34, 0.8);
         border: 1.5px solid #2e1d50;
@@ -174,19 +172,19 @@ if "current_view" not in st.session_state:
 if "active_project" not in st.session_state:
     st.session_state["active_project"] = {"title": "Untitled Sequence", "script": "", "data": None}
 if "game_xp" not in st.session_state:
-    st.session_state["game_xp"] = 100
+    st.session_state["game_xp"] = 150
+if "dojo_feedback" not in st.session_state:
+    st.session_state["dojo_feedback"] = {}
 if "dialogue_duel_chat" not in st.session_state:
     st.session_state["dialogue_duel_chat"] = [
-        {"role": "mentor", "text": "Vanakkam Director! Script writing-na verum kadhai solradhu illa. Camera-ku oru visual sketch ezhudhuradhu. Naan ungaloda Screenplay Master. Start panlaama?"}
+        {"role": "mentor", "text": "Vanakkam Director! Script writing-na kadhai solradhu mattum illa, oru production blueprint create panradhu. Naan ungaloda Showrunner Mentor. Indha 6 missions mudicha neenga innorutharukku masterclass edukalaam. Ready-ah?"}
     ]
 
 def get_current_ist_time():
     tz = pytz.timezone('Asia/Kolkata')
     return datetime.now(tz).strftime("%d %b %Y • %I:%M:%S %p IST")
 
-# Robust Gemini API Caller with 2026 Recommended Model Pool
 def call_cinematex_ai(api_key, prompt, expect_json=True):
-    # Models ordered by availability: 3.6-flash is primary, fallback to 3.7-flash, 3.5-flash-lite
     models = ['gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-3.5-flash-lite']
     client = genai.Client(api_key=api_key)
     cfg = {'response_mime_type': 'application/json'} if expect_json else {}
@@ -240,7 +238,7 @@ def generate_dossier_pdf(title, raw_text, p_data, timestamp):
 if st.session_state["user"] is None:
     st.write("")
     st.markdown('<div class="funky-title" style="text-align:center;">⚡ CINEMATEX // ACCESS</div>', unsafe_allow_html=True)
-    st.markdown('<div style="text-align:center; color:#00f0ff; font-family:Orbitron;">NEURAL PRE-PRODUCTION DECK & SCRIPT DOJO</div>', unsafe_allow_html=True)
+    st.markdown('<div style="text-align:center; color:#00f0ff; font-family:Orbitron;">NEURAL PRE-PRODUCTION DECK & SCREENPLAY DOJO</div>', unsafe_allow_html=True)
     st.write("")
 
     col_l1, col_center, col_l2 = st.columns([1, 1.4, 1])
@@ -284,7 +282,8 @@ col_nav1, col_nav2, col_nav3 = st.columns([2.5, 2, 1])
 with col_nav1:
     st.markdown('<div class="funky-title" style="font-size:1.8rem;">⚡ CINEMATEX</div>', unsafe_allow_html=True)
 with col_nav2:
-    st.markdown(f"<div style='margin-top:12px; font-size:13px; color:#94a3b8;'>DIRECTOR: <b style='color:#00f0ff;'>{st.session_state['user'].email}</b> | XP: <b style='color:#ffe600;'>{st.session_state['game_xp']} XP</b></div>", unsafe_allow_html=True)
+    rank_title = "SCRIPT APPRENTICE" if st.session_state['game_xp'] < 300 else ("SCENE DOCTOR" if st.session_state['game_xp'] < 600 else "MASTER SHOWRUNNER")
+    st.markdown(f"<div style='margin-top:12px; font-size:13px; color:#94a3b8;'>DIRECTOR: <b style='color:#00f0ff;'>{st.session_state['user'].email}</b> | RANK: <b style='color:#ff007f;'>{rank_title}</b> | XP: <b style='color:#ffe600;'>{st.session_state['game_xp']} XP</b></div>", unsafe_allow_html=True)
 with col_nav3:
     if st.button("🚪 LOGOUT", use_container_width=True):
         supabase.auth.sign_out()
@@ -293,21 +292,21 @@ with col_nav3:
         st.rerun()
 
 # =============================================================
-# 2. STUDIO COMMAND NEXUS (HUB: BIG HERO LEARN + 3 SUB-DOMAINS)
+# 2. STUDIO COMMAND NEXUS (HUB)
 # =============================================================
 if st.session_state["current_view"] == "HUB":
     st.write("")
     st.markdown("<h2 style='text-align:center; font-family:Orbitron; color:#ffe600;'>⚡ STUDIO COMMAND NEXUS</h2>", unsafe_allow_html=True)
     st.write("")
 
-    # TOP BIG HERO: SCRIPT WRITING ACADEMY & INTERACTIVE GAME
+    # TOP BIG HERO: SCRIPTWRITING MASTERCLASS & DOJO
     st.markdown("""
     <div class="hero-learn-card">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <div>
-                <span class="time-badge" style="color:#c084fc; border-color:#c084fc;">MASTER THE CINEMA CRAFT</span>
+                <span class="time-badge" style="color:#c084fc; border-color:#c084fc;">COMPLETE SCREENPLAY CURRICULUM // ZERO TO SHOWRUNNER</span>
                 <h2 style="font-family:Orbitron; color:#00f0ff; margin-top:8px; margin-bottom:4px;">🎓 SCRIPTWRITING MASTERCLASS & DOJO QUEST</h2>
-                <p style="color:#e2e8f0; font-size:15px; margin:0;">Learn screenplay architecture from scratch — what makes a script filmable, then level up through real-time dialogue duels and RPG missions!</p>
+                <p style="color:#e2e8f0; font-size:15px; margin:0;">In-depth 6-tier screenwriting academy. Master sluglines, foley camera actions, subtext psychology, 3-act tension, and battle the AI Showrunner live!</p>
             </div>
             <div style="font-size:3.5rem;">🎮</div>
         </div>
@@ -319,17 +318,15 @@ if st.session_state["current_view"] == "HUB":
         st.rerun()
 
     st.write("")
-    st.markdown("<h4 style='font-family:Orbitron; color:#94a3b8;'>PRODUCTION ENGINES // 3 DOMAINS</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='font-family:Orbitron; color:#94a3b8;'>PRODUCTION ENGINES // 3 WORKSPACE DOMAINS</h4>", unsafe_allow_html=True)
 
-    # 3 LOWER SUB-DOMAINS (KUTTI CARDS)
     col_sub1, col_sub2, col_sub3 = st.columns(3, gap="medium")
-    
     with col_sub1:
         st.markdown("""
         <div class="mini-card">
             <h2 style="margin:0;">🚀</h2>
             <h4 style="color:#00f0ff; margin-top:6px;">QUANTUM FORGE</h4>
-            <p style="color:#94a3b8; font-size:12px;">Convert raw story passages into Courier screenplay & shot lists.</p>
+            <p style="color:#94a3b8; font-size:12px;">Convert raw passages into Courier screenplay & shot lists.</p>
         </div>
         """, unsafe_allow_html=True)
         if st.button("LAUNCH FORGE ➔", key="btn_forge", use_container_width=True):
@@ -362,7 +359,7 @@ if st.session_state["current_view"] == "HUB":
             st.rerun()
 
 # =============================================================
-# 3. SCRIPTWRITING MASTERCLASS + TALKING CHAT DUEL GAME
+# 3. COMPREHENSIVE SCRIPTWRITING DOJO (6 COMPLETE MISSIONS)
 # =============================================================
 elif st.session_state["current_view"] == "LEARN_DOJO":
     col_lback, col_lhead = st.columns([1, 4])
@@ -371,365 +368,187 @@ elif st.session_state["current_view"] == "LEARN_DOJO":
             st.session_state["current_view"] = "HUB"
             st.rerun()
     with col_lhead:
-        st.markdown("<h2 style='font-family:Orbitron; color:#c084fc; margin:0;'>🎓 SCRIPT ACADEMY & INTERACTIVE DUEL</h2>", unsafe_allow_html=True)
-        st.caption("First: Discover the foundation of screenplay. Second: Step into the Talking Quest with your AI Mentor!")
+        st.markdown("<h2 style='font-family:Orbitron; color:#c084fc; margin:0;'>🎮 THE CINEMATEX SCREENPLAY DOJO</h2>", unsafe_allow_html=True)
+        st.caption("Comprehensive 6-Tier Curriculum: Learn the deep theory, then conquer the interactive challenge to earn XP.")
 
     st.write("")
 
-    tab_learn, tab_game = st.tabs([
-        "📖 STEP 1: SCRIPT WRITING-NA ENNA? (CORE LESSONS)",
-        "⚔️ STEP 2: INTERACTIVE WRITING QUEST (TALKING DUEL GAME)"
+    # Player HUD Bar
+    st.markdown(f"""
+    <div class="game-hud">
+        <div>
+            <span style="color:#94a3b8; font-size:12px;">ACTIVE RANK:</span><br>
+            <b style="color:#00f0ff; font-family:Orbitron; font-size:17px;">LEVEL {1 + st.session_state['game_xp']//100} • {rank_title}</b>
+        </div>
+        <div>
+            <span style="color:#94a3b8; font-size:12px;">DIRECTOR XP:</span><br>
+            <b style="color:#ffe600; font-family:Orbitron; font-size:17px;">⚡ {st.session_state['game_xp']} XP</b>
+        </div>
+        <div>
+            <span style="color:#94a3b8; font-size:12px;">DOJO MASTERY:</span><br>
+            <b style="color:#ff007f; font-family:Orbitron; font-size:17px;">{min(100, int((st.session_state['game_xp']/600)*100))}% SYNCHRONIZED</b>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    m1, m2, m3, m4, m5, m6 = st.tabs([
+        "LVL 1: SLUGLINE & GEOGRAPHY",
+        "LVL 2: SHOW DON'T TELL",
+        "LVL 3: SUBTEXT & STATUS",
+        "LVL 4: 3-ACT TENSION GRAPH",
+        "LVL 5: BLOCKING & TRANSITIONS",
+        "LVL 6: SHOWRUNNER CAPSTONE"
     ])
 
     api_key = st.secrets.get("GEMINI_API_KEY", "")
 
-    # STEP 1: THE FOUNDATION LESSONS
-    with tab_learn:
+    # ---------------- LEVEL 1 ----------------
+    with m1:
         st.markdown('<div class="scroll-container">', unsafe_allow_html=True)
         st.markdown("""
-        <div class="cyber-card cyber-card-purple">
-            <h3 style="color:#c084fc; margin:0;">💡 SCRIPT WRITING-NA UNMAIYILE ENNA?</h3>
+        <div class="cyber-card">
+            <h3 style="color:#00f0ff; margin:0;">LEVEL 1 THEORY: THE ANATOMY OF SCENE HEADINGS (SLUGLINES)</h3>
             <p style="color:#f8fafc; font-size:15px; margin-top:6px;">
-            Oru novel padikumbodhu manasula imagine pannuvom. Aana <b>Screenplay nguradhu oru building kattura blueprint maadhiri!</b><br>
-            Camera lens enna paakudhu, mic enna kekkudhu, actors enna physical-ah panraanga ngra 3 vishayatha mattum dhaan script-la ezhudha mudiyum.
+            A screenplay is not literature; it is an <b>engineering schematic</b> for 150 crew members (DOP, Gaffer, Art Director, Location Manager).
+            The Slugline tells the team whether they are renting a studio or shooting in rain, and whether to bring daylight HMIs or night tungsten lights.
             </p>
+            <hr style="border:0.5px solid #2d1d4f;">
+            <h4>The 3 Invariant Laws of Sluglines:</h4>
+            <ul>
+                <li><b>Interior vs Exterior:</b> <code>INT.</code> means walls and roof; <code>EXT.</code> means open sky. For vehicles moving through streets, use <code>INT./EXT. CAR - CONTINUOUS</code>.</li>
+                <li><b>Specific Specificity:</b> Never write <code>INT. HOUSE</code>. Write <code>INT. MAYA'S BEDROOM - WARDROBE CLOSET</code>. Camera needs exact geography.</li>
+                <li><b>Temporal Lighting:</b> <code>DAY</code> and <code>NIGHT</code> are standard. Avoid 4:30 PM. Use <code>DUSK</code>, <code>DAWN</code>, <code>MAGIC HOUR</code> only if sunlight is narratively crucial.</li>
+                <li><b>Flashback Tags:</b> Append <code>- FLASHBACK (1998)</code> at the end of the slugline so the production designer changes props.</li>
+            </ul>
         </div>
         """, unsafe_allow_html=True)
 
-        col_less1, col_less2 = st.columns(2)
-        with col_less1:
-            st.markdown("""
-            #### 1. Sluglines (Where & When)
-            Camera enga set pannanum nu production crew-ku solradhu:
-            * `INT.` (Interior - Kulla) / `EXT.` (Exterior - Veliya)
-            * `LOCATION` (Eg: METRO TRAIN COACH 3)
-            * `TIME` (NIGHT / DAY / DAWN)
-            > **Rule:** `INT. METRO TRAIN COACH 3 - NIGHT`
+        st.markdown("### 🧩 QUEST 1: The Production Location Rig")
+        st.caption("Your Cinematographer is waiting. Formulate the precise slugline for a high-speed police chase inside a Chennai Metro train:")
+        
+        c_cam = st.selectbox("Camera Environment:", ["-- Select --", "INT.", "EXT.", "INT./EXT."], key="q1_cam")
+        c_loc = st.text_input("Precise Geography (Specific Compartment & Line):", value="CHENNAI METRO - COACH 04 (BLUE LINE)", key="q1_loc")
+        c_time = st.selectbox("Lighting Condition:", ["-- Select --", "NIGHT", "DAY", "DAWN", "CONTINUOUS"], key="q1_time")
 
-            #### 2. Visual Action ("Show, Don't Tell")
-            Manasula ninikuradha camera paaka mudiyadhu!
-            * ❌ *Thappu:* "Vikram is sad about his father."
-            * ✅ *Sari:* "Vikram stares at his father's dusty spectacles on the desk. He doesn't wipe the tear dripping down his jaw."
-            """)
-        with col_less2:
-            st.markdown("""
-            #### 3. Subtext in Dialogue
-            Direct-ah solra dialogue boring! True drama hides in what people HIDE.
-            * ❌ *Flat:* "I am angry that you cheated me in money."
-            * ✅ *Subtext:* "Tea-ku innum bill kudukalayae bro? Namma partnership maadhiriye idhuvum free-ah?"
-
-            #### 4. The 3-Act Tension Graph
-            * **Act 1:** Character routine & Inciting Incident (Problem starts).
-            * **Act 2:** Conflict rises, Midpoint shock, Darkest hour.
-            * **Act 3:** High-stakes Climax showdown.
-            """)
+        if st.button("LOCK SLUGLINE TO CALL SHEET (+40 XP) ➔", key="q1_btn"):
+            if c_cam != "-- Select --" and c_time != "-- Select --":
+                slug_res = f"{c_cam} {c_loc.upper().strip()} - {c_time}"
+                st.success(f"🎯 CALL SHEET VALIDATED! Industry Slugline: `{slug_res}`")
+                st.session_state["game_xp"] += 40
+                st.balloons()
+            else:
+                st.error("Incomplete camera parameters! Select Environment and Time.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # STEP 2: TALKING DUEL / CHAT QUEST WITH AI MENTOR
-    with tab_game:
+    # ---------------- LEVEL 2 ----------------
+    with m2:
+        st.markdown('<div class="scroll-container">', unsafe_allow_html=True)
         st.markdown("""
-        <div class="game-hud">
-            <div>
-                <span style="color:#94a3b8; font-size:12px;">DIRECTOR XP:</span><br>
-                <b style="color:#ffe600; font-family:Orbitron; font-size:18px;">⚡ {xp} XP</b>
-            </div>
-            <div>
-                <span style="color:#94a3b8; font-size:12px;">MISSION OBJECTIVE:</span><br>
-                <b style="color:#00f0ff; font-family:Orbitron; font-size:16px;">CONVERSE & COMPLETE WRITING CHALLENGES</b>
-            </div>
+        <div class="cyber-card cyber-card-alt">
+            <h3 style="color:#ff0055; margin:0;">LEVEL 2 THEORY: THE "SHOW, DON'T TELL" CAMERA DISCIPLINE</h3>
+            <p style="color:#f8fafc; font-size:15px; margin-top:6px;">
+            <b>The Camera Eye Rule:</b> If a 35mm lens cannot photograph it, or an Arri directional mic cannot record it, it DOES NOT EXIST on a screenplay page.
+            </p>
+            <hr style="border:0.5px solid #2d1d4f;">
+            <h4>Internal Thought vs Physical Foley Action:</h4>
+            <ul>
+                <li>❌ <b>Unfilmable Thought:</b> <i>"Rajesh is reminiscing about the guilt of stealing money from his sister 5 years ago."</i> (An actor cannot act '5 years ago' without a physical prop or gesture!)</li>
+                <li>✅ <b>Cinematic Action:</b> <i>"Rajesh places a stack of rumpled hundred-rupee notes into his sister's open lunchbox. His knuckles graze a faded family photograph taped to the lid. He snatches his hand back."</i></li>
+                <li><b>The 3-Sensory Rule:</b> Include visual gesture, acoustic foley (sound), and environmental weight (sweat, rain, ticking clocks).</li>
+            </ul>
         </div>
-        """.format(xp=st.session_state["game_xp"]), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
-        # Chat display container
-        st.markdown('<div class="scroll-container" style="max-height: 380px;">', unsafe_allow_html=True)
-        for msg in st.session_state["dialogue_duel_chat"]:
-            if msg["role"] == "mentor":
-                st.markdown(f"""
-                <div class="cyber-card" style="border-left: 5px solid #a855f7;">
-                    <b style="color:#c084fc;">🎬 DIRECTOR MENTOR:</b><br>
-                    <span style="color:#f8fafc; font-size:15px;">{msg['text']}</span>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div class="cyber-card cyber-card-gold" style="text-align:right;">
-                    <b style="color:#ffe600;">YOU (SCREENWRITER):</b><br>
-                    <span style="color:#f8fafc; font-size:15px;">{msg['text']}</span>
-                </div>
-                """, unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-        # User input box for talking game
-        col_c_in, col_c_btn = st.columns([4, 1])
-        with col_c_in:
-            user_msg = st.text_input(
-                "Reply to your Mentor / Submit your scene line:",
-                placeholder="E.g. Mentor, na ready! Enaku oru police chase scene ku visual action challenge kudu...",
-                label_visibility="collapsed"
-            )
-        with col_c_btn:
-            send_btn = st.button("SEND TO MENTOR ➔", use_container_width=True)
-
-        if send_btn and user_msg.strip():
-            if not api_key:
-                st.warning("Please configure Gemini API Key in Secrets or Workspace panel!")
-            else:
-                st.session_state["dialogue_duel_chat"].append({"role": "user", "text": user_msg})
-                with st.spinner("Director Mentor evaluating and firing back..."):
-                    chat_context = "\n".join([f"{m['role']}: {m['text']}" for m in st.session_state["dialogue_duel_chat"][-4:]])
-                    mentor_prompt = f"""
-                    You are a witty, world-class Tamil & Hollywood cinema director mentoring a student screenwriter in an interactive text-based RPG game.
-                    Converse in cool, engaging Tanglish (Tamil + English mixture like Chennai film industry).
-                    Rules:
-                    1. If the student answers a screenplay challenge, review their visual description or subtext, give feedback, and award XP (e.g., '+30 XP!').
-                    2. Give them exciting mini-challenges (e.g., 'Ipo oru tea shop-la silent-a murder plan panra 2 lines dialogue ezhudhu', 'Convert this feeling into pure visual action').
-                    3. Keep it interactive, punchy, and super fun like talking to an experienced director friend.
-
-                    Recent Conversation:
-                    {chat_context}
-
-                    Reply directly as Director Mentor:
-                    """
-                    reply = call_cinematex_ai(api_key, mentor_prompt, expect_json=False)
-                    if reply:
-                        st.session_state["dialogue_duel_chat"].append({"role": "mentor", "text": reply})
-                        st.session_state["game_xp"] += 25
-                        st.rerun()
-
-# =============================================================
-# 4. WORKSPACE (QUANTUM FORGE)
-# =============================================================
-elif st.session_state["current_view"] == "WORKSPACE":
-    if st.button("⬅️ BACK TO COMMAND NEXUS"):
-        st.session_state["current_view"] = "HUB"
-        st.rerun()
-
-    col_side, col_main = st.columns([1, 2.5], gap="medium")
-    
-    with col_side:
-        st.markdown("### 🕹️ CONTROLS & ENGINE")
-        api_key = st.secrets.get("GEMINI_API_KEY", "")
-        if api_key:
-            st.markdown("<span class='time-badge' style='color:#00f0ff; border-color:#00f0ff;'>⚡ NEURAL ENGINE: LINKED & ACTIVE</span>", unsafe_allow_html=True)
-        else:
-            api_key = st.text_input("GEMINI API KEY (Optional Override)", type="password")
-
-        project_title = st.text_input("PROJECT TITLE", value=st.session_state["active_project"]["title"])
+        st.markdown("### ⚔️ QUEST 2: The Physicality Arena (AI Film-School Judge)")
+        st.caption("Rewrite this amateur line into a pure 35mm visual action scene with Foley sound textures:")
         
-        script_input = st.text_area(
-            "INPUT STORY PASSAGE / SUMMARY / DIALOGUE:",
-            value=st.session_state["active_project"]["script"],
-            height=340,
-            placeholder="Kadhai summary / rough passage inga paste pannunga. Engine adha Hollywood/Tamil cinema standard script-a mathidum..."
-        )
-        
-        forge_btn = st.button("⚡ EXECUTE CINEMATEX FORGE", use_container_width=True)
-        save_db_btn = st.button("💾 SAVE WITH TIMESTAMP", use_container_width=True)
+        st.info("AMATEUR PASSAGE: 'Kathir is sitting in the dark room feeling betrayed and plotting revenge against his best friend who stole his business.'")
+        user_a2 = st.text_area("Write the Physical Action Block (No Thoughts, Camera Only):", height=120, key="q2_in", placeholder="E.g. Kathir leans over a mahogany desk illuminated only by the flicker of a CRT monitor. A single ash drop falls from his beedi...")
 
-        if save_db_btn:
-            if not script_input.strip():
-                st.warning("Buffer empty! Cannot save.")
-            else:
-                ts = get_current_ist_time()
-                try:
-                    supabase.table("saved_scripts").insert({
-                        "user_id": st.session_state["user"].id,
-                        "title": project_title,
-                        "script_content": script_input,
-                        "parsed_data": st.session_state["active_project"].get("data", {}),
-                        "saved_at_formatted": ts,
-                        "is_exported": False
-                    }).execute()
-                    st.success(f"Project safely preserved at {ts}")
-                except Exception as err:
-                    st.error(f"Database error: {err}")
-
-    with col_main:
-        st.markdown("### 📊 PRODUCTION MATRIX")
-        tab_script, tab1, tab2, tab3, tab4, tab5 = st.tabs([
-            "📜 INDUSTRY SCREENPLAY",
-            "⚡ SCENE BEATS",
-            "👤 CHARACTER BIBLE",
-            "🎥 SHOT LIST",
-            "🎨 STORYBOARD PROMPTS",
-            "📄 EXPORT PDF DOSSIER"
-        ])
-
-        if forge_btn:
+        if st.button("SUBMIT TO AI FILM SCHOOL BOARD (+50 XP) ➔", key="q2_btn"):
             if not api_key:
-                st.error("Gemini API Key missing! Check Secrets or input.")
-            elif not script_input.strip():
-                st.warning("Provide a story passage to forge!")
+                st.warning("API Key needed! Set in Secrets or Workspace.")
+            elif not user_a2.strip():
+                st.warning("Write your action description first!")
             else:
-                with st.spinner("Cinematex Neural Engine decomposing narrative & engineering deep production matrix..."):
-                    prompt = f"""
-                    You are an elite cinema director, script doctor, and cinematographer specializing in Indian/Tamil cinema as well as global Hollywood standards.
-                    Input text (rough story passage or dialogues):
-                    ---
-                    {script_input}
-                    ---
-                    TASK REQUIREMENTS:
-                    1. "formatted_script": Convert into flawless industry standard screenplay (SLUGLINES e.g. INT. / EXT. - LOCATION - TIME, descriptive visual action paragraphs, centered uppercase CHARACTER NAMES, parentheticals, sharp dialogue). Preserve core story essence and language flavor (Tamil/Tanglish/English).
-                    2. "scene_beats": Deep breakdown with "scene_title", "emotional_tone", "tension_rating", "micro_beats", "director_vision".
-                    3. "characters": "name", "role", "appearance", "quirks", "core_conflict".
-                    4. "shot_list": "scene_no", "shot_type", "camera_angle", "lighting_setup", "sound_cue".
-                    5. "storyboard_prompts": ULTRA-DETAILED prompts for Midjourney v6 / Flux with framing, lens, lighting, color grade, mood, --ar 16:9.
+                with st.spinner("Screenplay Evaluator analyzing unfilmable words & foley dynamics..."):
+                    judge_p = f"""
+                    You are a legendary film school director evaluating a student's screenplay action description.
+                    Challenge: Convert 'Kathir is sitting in the dark room feeling betrayed and plotting revenge against his best friend who stole his business' into PURE visual action, object interaction, and sound cues.
+                    Student submission:
+                    "{user_a2}"
 
-                    Return STRICT valid JSON only with this schema:
+                    Evaluate rigorously. Ban unfilmable thoughts. Return STRICT JSON:
                     {{
-                        "formatted_script": "string",
-                        "scene_beats": [ {{"scene_title": "", "emotional_tone": "", "tension_rating": "", "micro_beats": "", "director_vision": ""}} ],
-                        "characters": [ {{"name": "", "role": "", "appearance": "", "quirks": "", "core_conflict": ""}} ],
-                        "shot_list": [ {{"scene_no": "", "shot_type": "", "camera_angle": "", "lighting_setup": "", "sound_cue": ""}} ],
-                        "storyboard_prompts": [ "string" ]
+                        "score": 88,
+                        "critique": "Crisp 2-sentence feedback analyzing physical props, camera framing viability, and micro-tension.",
+                        "xp_awarded": 50
                     }}
                     """
-                    raw_res = call_cinematex_ai(api_key, prompt, expect_json=True)
-                    if raw_res:
+                    raw_fb = call_cinematex_ai(api_key, judge_p, expect_json=True)
+                    if raw_fb:
                         try:
-                            clean_json = raw_res.strip().replace("```json", "").replace("```", "")
-                            parsed = json.loads(clean_json)
-                            st.session_state["active_project"]["data"] = parsed
-                            st.session_state["active_project"]["script"] = script_input
-                            st.session_state["active_project"]["title"] = project_title
-                            st.success("CINEMATEX FORGE SUCCESSFUL // ALL MATRICES SYNCHRONIZED")
+                            clean_fb = json.loads(raw_fb.strip().replace("```json","").replace("```",""))
+                            st.session_state["dojo_feedback"]["q2"] = clean_fb
+                            st.session_state["game_xp"] += clean_fb.get("xp_awarded", 40)
                         except Exception as e:
-                            st.error(f"JSON parsing error: {e}")
-                    else:
-                        st.error("AI Neural engine connection timed out. Please retry.")
+                            st.error(f"Error parsing feedback: {e}")
 
-        p_data = st.session_state["active_project"].get("data")
-        if p_data:
-            with tab_script:
-                st.caption("COURIER PRIME CINEMA STANDARD SCREENPLAY:")
-                script_formatted = p_data.get("formatted_script", "Script not ready.")
-                st.markdown(f'<div class="scroll-container"><div class="screenplay-box">{script_formatted}</div></div>', unsafe_allow_html=True)
+        if "q2" in st.session_state["dojo_feedback"]:
+            fb = st.session_state["dojo_feedback"]["q2"]
+            st.markdown(f"""
+            <div class="cyber-card">
+                <h4 style="color:#00f0ff; margin:0;">AI JUDGE SCORE: {fb.get('score')}/100 ⚡ (+{fb.get('xp_awarded')} XP)</h4>
+                <p style="color:#ffe600; margin-top:6px;"><b>Director Feedback:</b> {fb.get('critique')}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-            with tab1:
-                st.markdown('<div class="scroll-container">', unsafe_allow_html=True)
-                for b in p_data.get("scene_beats", []):
-                    st.markdown(f"""
-                    <div class="cyber-card">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <h4 style="color:#00f0ff; margin:0;">⚡ {b.get('scene_title', 'SCENE')}</h4>
-                            <span class="time-badge">{b.get('emotional_tone')} • TENSION: {b.get('tension_rating')}</span>
-                        </div>
-                        <p style="margin-top:10px; color:#e2e8f0; font-size:15px;"><b>Micro-Beats:</b><br>{b.get('micro_beats', '')}</p>
-                        <p style="color:#94a3b8; font-size:14px; margin:0;"><b>Director Subtext & Staging:</b> {b.get('director_vision', '')}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                st.markdown('</div>', unsafe_allow_html=True)
+    # ---------------- LEVEL 3 ----------------
+    with m3:
+        st.markdown('<div class="scroll-container">', unsafe_allow_html=True)
+        st.markdown("""
+        <div class="cyber-card cyber-card-gold">
+            <h3 style="color:#ffe600; margin:0;">LEVEL 3 THEORY: SUBTEXT, STATUS GAMES & REVERSE PSYCHOLOGY</h3>
+            <p style="color:#f8fafc; font-size:15px; margin-top:6px;">
+            In bad scripts, characters say what they mean. In masterpiece scripts, <b>characters use words as smoke grenades to hide their real objective.</b>
+            </p>
+            <hr style="border:0.5px solid #2d1d4f;">
+            <h4>The 3 Pillars of Subtextual Dialogue:</h4>
+            <ul>
+                <li><b>Status Shifts:</b> In any 2-character dialogue, one holds the high ground (power/information) and the other holds low ground. Great scenes end with the status flipping upside down!</li>
+                <li><b>The Third Object Rule:</b> Instead of talking about their love or hatred, characters talk about an ordinary object (a cup of tea, a watch, a pending bill). The emotion is transferred into the object.</li>
+                <li><b>Rhythm of Omission:</b> What the character REFUSES to answer creates 10x more tension than what they say.</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
 
-            with tab2:
-                st.markdown('<div class="scroll-container">', unsafe_allow_html=True)
-                for c in p_data.get("characters", []):
-                    st.markdown(f"""
-                    <div class="cyber-card cyber-card-alt">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <h3 style="color:#ff0055; margin:0;">👤 {c.get('name', 'UNKNOWN')}</h3>
-                            <span class="time-badge" style="color:#ff0055; border-color:#ff0055;">{c.get('role', '')}</span>
-                        </div>
-                        <div style="margin-top:8px; font-size:14px;"><b style="color:#00f0ff;">Visual & Costumes:</b> {c.get('appearance', '')}</div>
-                        <div style="margin-top:5px; font-size:14px;"><b style="color:#ffe600;">Mannerisms & Quirks:</b> {c.get('quirks', '')}</div>
-                        <div style="margin-top:5px; font-size:14px;"><b style="color:#ff0055;">Internal Conflict:</b> {c.get('core_conflict', '')}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("### 🎭 QUEST 3: The Subtext Interrogation Duel")
+        st.caption("Rewrite this blatant confession into an icy psychological status game:")
+        st.error("BLUNT DIALOGUE: POLICE INSPECTOR: 'I have evidence that you poisoned the minister's food, so tell me where the money is.'")
+        
+        user_a3 = st.text_area("Rewrite using Misdirection, Pauses & Status Inversion:", height=120, key="q3_in", placeholder="Inspector sets down two glasses. Slides one forward. 'Sugar or honey, Doctor?'...")
 
-            with tab3:
-                st.markdown('<div class="scroll-container">', unsafe_allow_html=True)
-                st.dataframe(p_data.get("shot_list", []), use_container_width=True)
-                st.markdown('</div>', unsafe_allow_html=True)
+        if st.button("EXECUTE SUBTEXT SURGERY (+50 XP) ➔", key="q3_btn"):
+            if not api_key:
+                st.warning("API Key needed!")
+            elif not user_a3.strip():
+                st.warning("Provide your subtext rewrite!")
+            else:
+                with st.spinner("Analyzing psychological leverage & verbal smoke..."):
+                    sub_p = f"""
+                    Analyze this screenplay subtext rewrite where an inspector corners a suspect without directly saying 'I know you did it'.
+                    Student rewrite:
+                    "{user_a3}"
 
-            with tab4:
-                st.caption("ULTRA-DETAILED PROMPTS (MIDJOURNEY V6 / FLUX):")
-                st.markdown('<div class="scroll-container">', unsafe_allow_html=True)
-                for i, p in enumerate(p_data.get("storyboard_prompts", []), 1):
-                    st.markdown(f"**Shot {i} Production Frame:**")
-                    st.code(p, language="text")
-                st.markdown('</div>', unsafe_allow_html=True)
-
-            with tab5:
-                st.markdown("### 📄 DIRECT PDF PRODUCTION DOSSIER")
-                ts_now = get_current_ist_time()
-                pdf_bytes = generate_dossier_pdf(project_title, script_input, p_data, ts_now)
-                if st.download_button(
-                    label="⬇️ DOWNLOAD OFFICIAL CINEMATEX DOSSIER (.PDF)",
-                    data=pdf_bytes,
-                    file_name=f"{project_title.replace(' ', '_')}_Cinematex_Dossier.pdf",
-                    mime="application/pdf",
-                    use_container_width=True
-                ):
-                    supabase.table("saved_scripts").insert({
-                        "user_id": st.session_state["user"].id,
-                        "title": project_title,
-                        "script_content": script_input,
-                        "parsed_data": p_data,
-                        "saved_at_formatted": ts_now,
-                        "is_exported": True
-                    }).execute()
-                    st.success("PDF exported and recorded into database!")
-
-# =============================================================
-# 5. SAVED VAULT (WITH LOAD & DELETE)
-# =============================================================
-elif st.session_state["current_view"] == "SAVED":
-    if st.button("⬅️ BACK TO COMMAND NEXUS"):
-        st.session_state["current_view"] = "HUB"
-        st.rerun()
-
-    st.markdown("<h2 style='font-family:Orbitron; color:#ffe600;'>📂 SAVED PROJECTS VAULT</h2>", unsafe_allow_html=True)
-    try:
-        res = supabase.table("saved_scripts").select("*").eq("user_id", st.session_state["user"].id).order("created_at", desc=True).execute()
-        items = res.data or []
-        if not items:
-            st.info("No saved drafts in the vault.")
-        else:
-            for item in items:
-                col_i1, col_load, col_del = st.columns([3, 1, 0.6])
-                with col_i1:
-                    st.markdown(f"### 🎬 {item['title']}")
-                    st.markdown(f"<span class='time-badge'>SAVED AT: {item.get('saved_at_formatted', 'N/A')}</span>", unsafe_allow_html=True)
-                with col_load:
-                    if st.button("LOAD SEQUENCE", key=f"load_{item['id']}", use_container_width=True):
-                        st.session_state["active_project"] = {
-                            "title": item["title"],
-                            "script": item["script_content"],
-                            "data": item["parsed_data"]
-                        }
-                        st.session_state["current_view"] = "WORKSPACE"
-                        st.rerun()
-                with col_del:
-                    if st.button("🗑️", key=f"del_{item['id']}", use_container_width=True):
-                        supabase.table("saved_scripts").delete().eq("id", item["id"]).execute()
-                        st.rerun()
-                st.divider()
-    except Exception as e:
-        st.error(f"Error: {e}")
-
-# =============================================================
-# 6. EXPORTED DOSSIERS (PDF VAULT)
-# =============================================================
-elif st.session_state["current_view"] == "EXPORTED":
-    if st.button("⬅️ BACK TO COMMAND NEXUS"):
-        st.session_state["current_view"] = "HUB"
-        st.rerun()
-
-    st.markdown("<h2 style='font-family:Orbitron; color:#00f0ff;'>📦 EXPORTED PDF DOSSIERS</h2>", unsafe_allow_html=True)
-    try:
-        res = supabase.table("saved_scripts").select("*").eq("user_id", st.session_state["user"].id).eq("is_exported", True).order("created_at", desc=True).execute()
-        items = res.data or []
-        if not items:
-            st.info("No exported PDFs found.")
-        else:
-            for item in items:
-                col_e1, col_e2 = st.columns([3, 1])
-                with col_e1:
-                    st.markdown(f"### 📄 {item['title']}")
-                    st.markdown(f"<span class='time-badge'>EXPORTED AT: {item.get('saved_at_formatted', 'N/A')}</span>", unsafe_allow_html=True)
-                with col_e2:
-                    pdf_data = generate_dossier_pdf(item['title'], item['script_content'], item.get('parsed_data', {}), item.get('saved_at_formatted', ''))
-                    st.download_button("⬇️ DOWNLOAD PDF", data=pdf_data, file_name=f"{item['title']}_Dossier.pdf", mime="application/pdf", key=f"dl_{item['id']}", use_container_width=True)
-                st.divider()
-    except Exception as e:
-        st.error(f"Error: {e}")
+                    Return STRICT JSON:
+                    {{
+                        "score": 92,
+                        "critique": "Specific feedback on status games, weaponization of silence, and psychological power shifts.",
+                        "xp_awarded": 50
+                    }}
+                    """
+                    raw_sub = call_cinematex_ai(api_key, sub_p, expect_json=True)
+                    if raw_sub:
+                        try:
+                            clean_sub = json.loads(raw_sub.strip().replace("```json","").replace("
