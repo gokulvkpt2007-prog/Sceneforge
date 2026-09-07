@@ -732,12 +732,12 @@ elif st.session_state["current_view"] == "WORKSPACE":
                     ---
                     REQUIREMENTS:
                     1. "formatted_script": Flawless industry screenplay (SLUGLINES, visual action lines, centered character names, parentheticals, sharp dialogue).
-                    2. "comic_panels": Generate 3 to 8 sequential COMIC GRAPHIC NOVEL DRAWING PANELS depicting the story.
+                    2. "comic_panels": Generate 3 to 6 sequential BASIC PENCIL SKETCH STORYBOARD PANELS.
                        Each item in the list must have:
                        - "panel_number": e.g. "Panel 1"
-                       - "shot_description": Exact camera angle & action in the panel
-                       - "caption": Comic caption or character dialogue
-                       - "visual_image_prompt": A highly concise visual prompt for generating a graphic novel drawing (e.g. "comic book ink drawing, dark noir graphic novel style, extreme low angle of police officer in pouring rain, neon cyan rim light, high contrast ink sketch")
+                       - "shot_description": Exact camera framing & actor staging
+                       - "caption": Dialogue or beat summary
+                       - "visual_image_prompt": A minimal, high-speed sketch prompt: "quick rough pencil storyboard sketch, black and white pencil drawing on rough sketch paper, loose minimalist line art, director thumbnail doodle, simple line sketch, no photorealism, no 3d render"
                     3. "scene_beats": "scene_title", "emotional_tone", "tension_rating", "micro_beats", "director_vision".
                     4. "characters": "name", "role", "appearance", "quirks", "core_conflict".
                     5. "shot_list": "scene_no", "shot_type", "camera_angle", "lighting_setup", "sound_cue".
@@ -789,20 +789,22 @@ elif st.session_state["current_view"] == "WORKSPACE":
                         </div>
                         """, unsafe_allow_html=True)
 
-                        clean_prompt = p.get('visual_image_prompt', 'comic ink drawing').replace('"', "'")
-                        encoded_prompt = urllib.parse.quote(f"{clean_prompt} --no realistic photo")
-                        comic_img_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=800&height=450&nologo=true"
+                        base_prompt = p.get('visual_image_prompt', 'rough pencil storyboard sketch').replace('"', "'")
+                        clean_prompt = f"{base_prompt}, quick black and white rough pencil drawing, minimalist rough doodle on paper, simple sketch lines --no color, no photorealism, no 3d, no render"
+                        encoded_prompt = urllib.parse.quote(clean_prompt)
+                        comic_img_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=768&height=432&nologo=true"
                         
-                        # Browser-native render to prevent Streamlit MediaFileStorage crashes
+                        # Hand-drawn storyboard frame display
                         st.markdown(f"""
-                        <div style="text-align: center; margin: 10px 0 15px 0;">
-                            <img src="{comic_img_url}" style="width: 100%; max-width: 800px; border-radius: 8px; border: 1px solid #2e1d50; box-shadow: 0 0 15px rgba(0, 240, 255, 0.15);" loading="lazy" alt="Comic Storyboard Panel" />
-                            <div style="color: #94a3b8; font-size: 13px; margin-top: 6px; font-style: italic;">
-                                💬 Panel Narrative: {p.get('caption', '')}
+                        <div style="text-align: center; margin: 10px 0 16px 0; background: #07070b; padding: 12px; border-radius: 8px; border: 1.5px dashed #4b5563;">
+                            <img src="{comic_img_url}" style="width: 100%; max-width: 720px; border-radius: 6px; filter: grayscale(100%) contrast(110%);" loading="lazy" alt="Rough Storyboard Sketch" />
+                            <div style="color: #94a3b8; font-family: 'Courier Prime', monospace; font-size: 13px; margin-top: 8px;">
+                                🎬 <b>{p.get('panel_number', 'PANEL')}:</b> {p.get('caption', '')}
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
                         st.write("")
+                        
                     st.markdown('</div>', unsafe_allow_html=True)
 
             with tab1:
