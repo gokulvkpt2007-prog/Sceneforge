@@ -515,7 +515,7 @@ if st.session_state["current_view"] == "HUB":
             st.rerun()
 
 # =============================================================
-# 3. MANUAL SCRIPTWRITING WORKSPACE (LIVE GREEN/RED SYNTAX DOCTOR)
+# 3. MANUAL SCRIPTWRITING WORKSPACE (LIVE SYNTAX & DIRECT EXPORT)
 # =============================================================
 elif st.session_state["current_view"] == "MANUAL_IDE":
     col_mback, col_mhead = st.columns([1, 4])
@@ -543,7 +543,7 @@ elif st.session_state["current_view"] == "MANUAL_IDE":
         )
         st.session_state["manual_script_input"] = typed_script
 
-     col_b1, col_b2 = st.columns(2)
+        col_b1, col_b2 = st.columns(2)
         with col_b1:
             save_manual_btn = st.button("💾 SAVE TO VAULT", use_container_width=True)
         with col_b2:
@@ -552,7 +552,6 @@ elif st.session_state["current_view"] == "MANUAL_IDE":
         col_exp1, col_exp2 = st.columns(2)
         ts_now = get_current_ist_time()
         
-        # 1. Direct Courier PDF Export
         with col_exp1:
             manual_pdf_bytes = generate_dossier_pdf(
                 m_title, 
@@ -568,7 +567,6 @@ elif st.session_state["current_view"] == "MANUAL_IDE":
                 use_container_width=True
             )
 
-        # 2. Direct Screenplay Fountain/Text Export
         with col_exp2:
             st.download_button(
                 label="📥 EXPORT TEXT (.TXT)",
@@ -593,7 +591,7 @@ elif st.session_state["current_view"] == "MANUAL_IDE":
                 st.success(f"Manual screenplay archived and synced to Exported Dossiers at {ts}")
             except Exception as e:
                 st.error(f"Error saving: {e}")
-                
+
         api_key = st.secrets.get("GEMINI_API_KEY", "")
         if fix_btn:
             if not api_key:
@@ -1037,7 +1035,7 @@ elif st.session_state["current_view"] == "EXPORTED":
         if not items:
             st.info("No exported PDFs found.")
         else:
-            for item in exported_items:
+            for item in items:
                 col_e1, col_e2 = st.columns([3, 1])
                 with col_e1:
                     st.markdown(f"### 📄 {item['title']}")
