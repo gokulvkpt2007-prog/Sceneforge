@@ -7,7 +7,6 @@ from datetime import datetime
 import pytz
 from fpdf import FPDF
 import re
-import urllib.parse
 
 # -------------------------------------------------------------
 # PAGE CONFIGURATION (LIGHTNING FAVICON LOCKED)
@@ -91,16 +90,6 @@ st.markdown("""
         padding: 4px 8px;
         margin: 4px 0;
         border-radius: 4px;
-    }
-
-    /* Comic Storyboard Frame Strips */
-    .comic-frame-card {
-        background: #0d091a;
-        border: 2px solid #00f0ff;
-        border-radius: 8px;
-        padding: 12px;
-        margin-bottom: 16px;
-        box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
     }
 
     .scroll-container {
@@ -213,7 +202,7 @@ def save_user_progress(user_id):
     except Exception:
         pass
 
-# Robust Gemini API Engine (with 3.6-flash & 3.7-flash models)
+# Robust Gemini API Engine (3.6-flash, 3.7-flash, 3.5-flash-lite)
 def call_cinematex_ai(api_key, prompt, expect_json=True):
     models = ['gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-3.5-flash-lite']
     client = genai.Client(api_key=api_key)
@@ -258,6 +247,18 @@ def generate_dossier_pdf(title, raw_text, p_data, timestamp):
     script_content = p_data.get("formatted_script", "") if isinstance(p_data, dict) else ""
     pdf.multi_cell(content_w, 5, safe_pdf_text(script_content))
     pdf.ln(6)
+
+    # 2. Storyboard Prompts in Dossier
+    if isinstance(p_data, dict) and p_data.get("storyboard_prompts"):
+        pdf.set_font("Helvetica", 'B', 13)
+        pdf.cell(content_w, 10, safe_pdf_text("2. STORYBOARD PRODUCTION PROMPTS"), new_x="LMARGIN", new_y="NEXT")
+        for idx, p in enumerate(p_data.get("storyboard_prompts", []), 1):
+            pdf.set_font("Helvetica", 'B', 9)
+            pdf.cell(content_w, 6, safe_pdf_text(f"Frame {idx} Prompt:"), new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("Helvetica", 'I', 8)
+            pdf.multi_cell(content_w, 5, safe_pdf_text(p))
+            pdf.ln(2)
+
     return bytes(pdf.output())
 
 # -------------------------------------------------------------
@@ -272,7 +273,6 @@ def analyze_screenplay_line(line, prev_line_type="EMPTY"):
     if re.match(r'^(INT\.|EXT\.|INT\./EXT\.)\s+[A-Z0-9\s\-\.\/\'\"]+', raw):
         return True, "SLUGLINE", "Valid Scene Heading"
 
-    # Flag fake/lazy sluglines
     if any(raw.upper().startswith(p) for p in ["INT ", "EXT ", "SCENE ", "OPENING ", "SHOT "]):
         return False, "INVALID_SLUGLINE", "Invalid Slugline! Must strictly start with INT. or EXT. (e.g., INT. HOUSE - NIGHT)"
 
@@ -280,25 +280,25 @@ def analyze_screenplay_line(line, prev_line_type="EMPTY"):
     if raw.isupper() and len(raw.split()) <= 4 and not any(char in raw for char in [".", ",", ":", ";", "!", "?"]):
         return True, "CHARACTER", "Valid Character Heading"
 
-    # 3. Parenthetical directive (whispering)
+    # 3. Parenthetical directive
     if raw.startswith("(") and raw.endswith(")"):
         return True, "PARENTHETICAL", "Valid Actor Cue"
 
     # 4. RED FLAG: Novel/Conversational Passage Dialogue in Quotes
     if '"' in raw or "'" in raw:
-        return False, "NOVEL_DIALOGUE", "Novel format detected! Screenplay dialogues cannot be inside quotes within paragraphs. Put Character Name in UPPERCASE above, then Dialogue below."
+        return False, "NOVEL_DIALOGUE", "Novel format detected! Put Character Name in UPPERCASE above, then Dialogue below."
 
     # 5. RED FLAG: Casual dialogue markers
     if re.search(r'\b(nu solra|nu kekuran|nu kathuran|solran|kekra|solra)\b', raw, re.IGNORECASE):
         return False, "CASUAL_PASSAGE", "Conversational storytelling detected. Format into Character Cue followed by dialogue line."
 
-    # 6. Valid Dialogue Line (Only allowed immediately below CHARACTER or PARENTHETICAL)
+    # 6. Valid Dialogue Line
     if prev_line_type in ["CHARACTER", "PARENTHETICAL"]:
         return True, "DIALOGUE", "Valid Dialogue Line"
 
-    # 7. Visual Action Line check (Must not have first-person / meta crew talk)
+    # 7. Visual Action Line check
     if re.search(r'\b(open agudhu|revel panrom|pakrom|camera angle)\b', raw, re.IGNORECASE):
-        return False, "DIRECTOR_COMMENTARY", "Don't write director talk ('revel panrom', 'camera angle'). Write what the camera sees physically."
+        return False, "DIRECTOR_COMMENTARY", "Don't write director commentary. Write what the lens sees physically."
 
     # 8. Unfilmable mental thoughts check
     unfilmable_words = [r'\bfeels?\b', r'\bthinking\b', r'\bthinks?\b', r'\bremembers?\b', r'\bguilty\b']
@@ -306,7 +306,6 @@ def analyze_screenplay_line(line, prev_line_type="EMPTY"):
         if re.search(trig, raw, re.IGNORECASE):
             return False, "UNFILMABLE", "Unfilmable thought detected. Camera cannot film internal mind feelings."
 
-    # Dense conversational paragraphs without screenplay discipline
     if len(raw.split()) > 14:
         return False, "RUNON_PARAGRAPH", "Action paragraph too dense. Screenplay action blocks must be short, punchy 1-2 visual lines."
 
@@ -482,7 +481,7 @@ if st.session_state["current_view"] == "HUB":
         <div class="mini-card">
             <h2 style="margin:0;">⚡</h2>
             <h4 style="color:#00f0ff; margin-top:6px;">QUANTUM FORGE</h4>
-            <p style="color:#94a3b8; font-size:12px;">Auto-forge Courier scripts & Comic Storyboard Panels.</p>
+            <p style="color:#94a3b8; font-size:12px;">Auto-forge Courier scripts & Storyboard Prompts.</p>
         </div>
         """, unsafe_allow_html=True)
         if st.button("LAUNCH AUTO-FORGE ➔", key="btn_auto", use_container_width=True):
@@ -659,7 +658,7 @@ elif st.session_state["current_view"] == "MANUAL_IDE":
             st.info("Click '💡 FIX ERROR & AUTO-CORRECT' to have AI automatically repair all red errors!")
 
 # =============================================================
-# 4. AUTOMATED WORKSPACE (WITH COMIC STORYBOARD PANELS)
+# 4. AUTOMATED WORKSPACE (QUANTUM FORGE WITH STORYBOARD PROMPTS)
 # =============================================================
 elif st.session_state["current_view"] == "WORKSPACE":
     if st.button("⬅️ BACK TO COMMAND NEXUS"):
@@ -681,7 +680,7 @@ elif st.session_state["current_view"] == "WORKSPACE":
             "RAW STORY PASSAGE / CONVERSATIONAL OUTLINE:",
             value=st.session_state["active_project"]["script"],
             height=320,
-            placeholder="Kadhai summary / rough passage inga paste pannunga. Engine adha Courier standard screenplay-va maathum, koodave Comic Storyboard Panels render pannum..."
+            placeholder="Kadhai summary / rough passage inga paste pannunga. Engine adha Courier standard screenplay-va maathum, koodave Storyboard Prompts generate pannum..."
         )
         
         forge_btn = st.button("⚡ EXECUTE CINEMATEX FORGE", use_container_width=True)
@@ -707,10 +706,10 @@ elif st.session_state["current_view"] == "WORKSPACE":
                     st.error(f"Database error: {err}")
 
     with col_main:
-        st.markdown("### 📊 PRODUCTION MATRIX & COMIC STORYBOARD")
-        tab_script, tab_comic, tab1, tab2, tab3, tab5 = st.tabs([
+        st.markdown("### 📊 PRODUCTION MATRIX")
+        tab_script, tab_sb, tab1, tab2, tab3, tab5 = st.tabs([
             "📜 INDUSTRY SCREENPLAY",
-            "🎨 COMIC STORYBOARD (VISUAL PANELS)",
+            "🎨 STORYBOARD PROMPTS",
             "⚡ SCENE BEATS",
             "👤 CHARACTER BIBLE",
             "🎥 SHOT LIST",
@@ -723,21 +722,17 @@ elif st.session_state["current_view"] == "WORKSPACE":
             elif not script_input.strip():
                 st.warning("Provide story passage to forge!")
             else:
-                with st.spinner("Cinematex Neural Engine generating screenplay, breakdowns, and Comic Storyboard panel graphics..."):
+                with st.spinner("Cinematex Neural Engine generating screenplay, breakdowns, and Storyboard prompts..."):
                     prompt = f"""
-                    You are an elite cinema director, script doctor, and graphic novel artist.
+                    You are an elite cinema director, script doctor, and cinematographer.
                     Input text:
                     ---
                     {script_input}
                     ---
                     REQUIREMENTS:
                     1. "formatted_script": Flawless industry screenplay (SLUGLINES, visual action lines, centered character names, parentheticals, sharp dialogue).
-                    2. "comic_panels": Generate 3 to 6 sequential BASIC PENCIL SKETCH STORYBOARD PANELS.
-                       Each item in the list must have:
-                       - "panel_number": e.g. "Panel 1"
-                       - "shot_description": Exact camera framing & actor staging
-                       - "caption": Dialogue or beat summary
-                       - "visual_image_prompt": A minimal, high-speed sketch prompt: "quick rough pencil storyboard sketch, black and white pencil drawing on rough sketch paper, loose minimalist line art, director thumbnail doodle, simple line sketch, no photorealism, no 3d render"
+                    2. "storyboard_prompts": ULTRA-DETAILED visual AI prompts for Midjourney v6 / Flux.
+                       Each prompt must specify: Framing & camera lens (e.g., 35mm Anamorphic, shallow depth of field), subject action, lighting setup, atmosphere, cinematic color grade, photorealistic movie still, --ar 16:9.
                     3. "scene_beats": "scene_title", "emotional_tone", "tension_rating", "micro_beats", "director_vision".
                     4. "characters": "name", "role", "appearance", "quirks", "core_conflict".
                     5. "shot_list": "scene_no", "shot_type", "camera_angle", "lighting_setup", "sound_cue".
@@ -745,7 +740,7 @@ elif st.session_state["current_view"] == "WORKSPACE":
                     Return STRICT JSON:
                     {{
                         "formatted_script": "string",
-                        "comic_panels": [ {{"panel_number": "", "shot_description": "", "caption": "", "visual_image_prompt": ""}} ],
+                        "storyboard_prompts": [ "string" ],
                         "scene_beats": [ {{"scene_title": "", "emotional_tone": "", "tension_rating": "", "micro_beats": "", "director_vision": ""}} ],
                         "characters": [ {{"name": "", "role": "", "appearance": "", "quirks": "", "core_conflict": ""}} ],
                         "shot_list": [ {{"scene_no": "", "shot_type": "", "camera_angle": "", "lighting_setup": "", "sound_cue": ""}} ]
@@ -759,7 +754,7 @@ elif st.session_state["current_view"] == "WORKSPACE":
                             st.session_state["active_project"]["data"] = parsed
                             st.session_state["active_project"]["script"] = script_input
                             st.session_state["active_project"]["title"] = project_title
-                            st.success("CINEMATEX FORGE SUCCESSFUL // COMIC STORYBOARDS RENDERED")
+                            st.success("CINEMATEX FORGE SUCCESSFUL // ALL MATRICES SYNCHRONIZED")
                         except Exception as e:
                             st.error(f"JSON parsing error: {e}")
 
@@ -769,42 +764,17 @@ elif st.session_state["current_view"] == "WORKSPACE":
                 script_formatted = p_data.get("formatted_script", "Script not ready.")
                 st.markdown(f'<div class="scroll-container"><div class="manual-screen-dark" style="color:#f8fafc;">{script_formatted}</div></div>', unsafe_allow_html=True)
 
-            with tab_comic:
-                st.markdown("### 🎨 DYNAMIC GRAPHIC NOVEL COMIC STORYBOARD")
-                st.caption("Auto-generated visual comic panels. Scroll through all sequential pages below:")
-                
-                panels = p_data.get("comic_panels", [])
-                if not panels:
-                    st.info("Comic panels not generated. Re-execute Forge.")
+            with tab_sb:
+                st.markdown("### 🎨 CINEMATIC STORYBOARD PROMPTS")
+                st.caption("Detailed Midjourney v6 / Flux prompts. Click the copy icon on the right to copy directly into AI image generators:")
+                sb_prompts = p_data.get("storyboard_prompts", [])
+                if not sb_prompts:
+                    st.info("No storyboard prompts generated. Re-execute Forge.")
                 else:
                     st.markdown('<div class="scroll-container">', unsafe_allow_html=True)
-                    for p in panels:
-                        st.markdown(f"""
-                        <div class="comic-frame-card">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <h4 style="color:#00f0ff; margin:0;">🖼️ {p.get('panel_number', 'FRAME')}</h4>
-                                <span class="time-badge">GRAPHIC NOVEL PANEL</span>
-                            </div>
-                            <p style="color:#e2e8f0; font-size:14px; margin-top:6px;"><b>Framing & Staging:</b> {p.get('shot_description')}</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-
-                        base_prompt = p.get('visual_image_prompt', 'rough pencil storyboard sketch').replace('"', "'")
-                        clean_prompt = f"{base_prompt}, quick black and white rough pencil drawing, minimalist rough doodle on paper, simple sketch lines --no color, no photorealism, no 3d, no render"
-                        encoded_prompt = urllib.parse.quote(clean_prompt)
-                        comic_img_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=768&height=432&nologo=true"
-                        
-                        # Hand-drawn storyboard frame display
-                        st.markdown(f"""
-                        <div style="text-align: center; margin: 10px 0 16px 0; background: #07070b; padding: 12px; border-radius: 8px; border: 1.5px dashed #4b5563;">
-                            <img src="{comic_img_url}" style="width: 100%; max-width: 720px; border-radius: 6px; filter: grayscale(100%) contrast(110%);" loading="lazy" alt="Rough Storyboard Sketch" />
-                            <div style="color: #94a3b8; font-family: 'Courier Prime', monospace; font-size: 13px; margin-top: 8px;">
-                                🎬 <b>{p.get('panel_number', 'PANEL')}:</b> {p.get('caption', '')}
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        st.write("")
-                        
+                    for i, p in enumerate(sb_prompts, 1):
+                        st.markdown(f"**🎬 Frame {i} Production Prompt:**")
+                        st.code(p, language="text")
                     st.markdown('</div>', unsafe_allow_html=True)
 
             with tab1:
