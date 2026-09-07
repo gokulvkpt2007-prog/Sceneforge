@@ -466,7 +466,7 @@ if st.session_state["current_view"] == "HUB":
         st.markdown("""
         <div class="mini-card">
             <h2 style="margin:0;">✍️</h2>
-            <h4 style="color:#00ff66; margin-top:6px;">MANUAL SCRIPT WRITING</h4>
+            <h4 style="color:#00ff66; margin-top:6px;">MANUAL S.WRITING</h4>
             <p style="color:#94a3b8; font-size:12px;">Live Green/Red syntax checking, exports & AI Auto-Correct.</p>
         </div>
         """, unsafe_allow_html=True)
