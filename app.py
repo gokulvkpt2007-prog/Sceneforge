@@ -88,9 +88,9 @@ st.markdown("""
         background: rgba(255, 0, 85, 0.15);
         border-left: 3px solid #ff0055;
         display: block;
-        padding: 2px 6px;
-        margin: 2px 0;
-        border-radius: 3px;
+        padding: 4px 8px;
+        margin: 4px 0;
+        border-radius: 4px;
     }
 
     /* Comic Storyboard Frame Strips */
@@ -182,7 +182,7 @@ if "current_view" not in st.session_state:
 if "active_project" not in st.session_state:
     st.session_state["active_project"] = {"title": "Untitled Sequence", "script": "", "data": None}
 if "manual_script_input" not in st.session_state:
-    st.session_state["manual_script_input"] = "INT. POLICE CONTROL ROOM - NIGHT\n\nRain drums against the bulletproof windows.\n\nVIKRAM (30s) checks his watch.\n\nVIKRAM\nInnum time irukku."
+    st.session_state["manual_script_input"] = "INT. HOUSE - NIGHT\n\nRain drums against the window.\n\nGOKUL (30s) checks his watch.\n\nGOKUL\nTeja enga?"
 if "learn_step" not in st.session_state:
     st.session_state["learn_step"] = 0
 if "mentor_chat" not in st.session_state:
@@ -213,7 +213,7 @@ def save_user_progress(user_id):
     except Exception:
         pass
 
-# Robust Gemini API Engine
+# Robust Gemini API Engine (with 3.6-flash & 3.7-flash models)
 def call_cinematex_ai(api_key, prompt, expect_json=True):
     models = ['gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-3.5-flash-lite']
     client = genai.Client(api_key=api_key)
@@ -259,7 +259,7 @@ def generate_dossier_pdf(title, raw_text, p_data, timestamp):
     pdf.multi_cell(content_w, 5, safe_pdf_text(script_content))
     pdf.ln(6)
     return bytes(pdf.output())
-    
+
 # -------------------------------------------------------------
 # STRICT HOLLYWOOD/CINEMA SCREENPLAY SYNTAX ANALYZER
 # -------------------------------------------------------------
@@ -276,7 +276,7 @@ def analyze_screenplay_line(line, prev_line_type="EMPTY"):
     if any(raw.upper().startswith(p) for p in ["INT ", "EXT ", "SCENE ", "OPENING ", "SHOT "]):
         return False, "INVALID_SLUGLINE", "Invalid Slugline! Must strictly start with INT. or EXT. (e.g., INT. HOUSE - NIGHT)"
 
-    # 2. Strict Character Cue (Must be purely UPPERCASE, <= 3 words, no punctuation)
+    # 2. Strict Character Cue (Must be purely UPPERCASE, <= 4 words, no punctuation)
     if raw.isupper() and len(raw.split()) <= 4 and not any(char in raw for char in [".", ",", ":", ";", "!", "?"]):
         return True, "CHARACTER", "Valid Character Heading"
 
@@ -285,19 +285,18 @@ def analyze_screenplay_line(line, prev_line_type="EMPTY"):
         return True, "PARENTHETICAL", "Valid Actor Cue"
 
     # 4. RED FLAG: Novel/Conversational Passage Dialogue in Quotes
-    # e.g., ava kitta "Teja enga" nu kekuran / "arivu illa..." nu kathuran
     if '"' in raw or "'" in raw:
-        return False, "NOVEL_DIALOGUE", "Novel format detected! Screenplay dialogues cannot be embedded in quotes inside action paragraphs. Put Character Name in UPPERCASE above, then Dialogue below."
+        return False, "NOVEL_DIALOGUE", "Novel format detected! Screenplay dialogues cannot be inside quotes within paragraphs. Put Character Name in UPPERCASE above, then Dialogue below."
 
     # 5. RED FLAG: Casual dialogue markers
-    if re.search(r'\b(nu solra|nu kekuran|nu kathuran|solran|kekra)\b', raw, re.IGNORECASE):
+    if re.search(r'\b(nu solra|nu kekuran|nu kathuran|solran|kekra|solra)\b', raw, re.IGNORECASE):
         return False, "CASUAL_PASSAGE", "Conversational storytelling detected. Format into Character Cue followed by dialogue line."
 
     # 6. Valid Dialogue Line (Only allowed immediately below CHARACTER or PARENTHETICAL)
     if prev_line_type in ["CHARACTER", "PARENTHETICAL"]:
         return True, "DIALOGUE", "Valid Dialogue Line"
 
-    # 7. Visual Action Line (Must not have first-person / meta crew talk)
+    # 7. Visual Action Line check (Must not have first-person / meta crew talk)
     if re.search(r'\b(open agudhu|revel panrom|pakrom|camera angle)\b', raw, re.IGNORECASE):
         return False, "DIRECTOR_COMMENTARY", "Don't write director talk ('revel panrom', 'camera angle'). Write what the camera sees physically."
 
@@ -307,8 +306,8 @@ def analyze_screenplay_line(line, prev_line_type="EMPTY"):
         if re.search(trig, raw, re.IGNORECASE):
             return False, "UNFILMABLE", "Unfilmable thought detected. Camera cannot film internal mind feelings."
 
-    # If it is just a normal sentence without sluglines or dialogue structure in a screenplay block:
-    if len(raw.split()) > 15:
+    # Dense conversational paragraphs without screenplay discipline
+    if len(raw.split()) > 14:
         return False, "RUNON_PARAGRAPH", "Action paragraph too dense. Screenplay action blocks must be short, punchy 1-2 visual lines."
 
     return True, "ACTION", "Valid Action Line"
@@ -573,15 +572,19 @@ elif st.session_state["current_view"] == "MANUAL_IDE":
             else:
                 with st.spinner("Cinema Doctor converting red error lines into Hollywood standard..."):
                     fix_prompt = f"""
-                    You are an expert Hollywood Screenplay Doctor.
-                    The user has written a manual script with some red syntax errors (unfilmable thoughts, broken sluglines, incorrect parentheticals).
-                    Script:
+                    You are an expert Hollywood and Tamil Cinema Screenplay Doctor.
+                    The user wrote a raw conversational/novel passage with red syntax errors:
                     ---
                     {typed_script}
                     ---
                     TASK:
-                    Fix all formatting and convert any unfilmable internal thoughts into pure 35mm visual actions and foley gestures.
-                    Preserve exact story intentions. Return ONLY the repaired screenplay text, with no markdown code blocks and no chat.
+                    Convert this entire passage into a pure, industry-standard Courier screenplay.
+                    Rules:
+                    1. Use standard sluglines like INT. HOUSE - NIGHT.
+                    2. Convert inline quotes into centered UPPERCASE Character cues followed by dialogue.
+                    3. Convert casual conversational narration ('nu solra', 'revel panrom', 'camera angle') into strict 3rd-person visual action blocks.
+                    4. Retain all Tamil/Tanglish linguistic emotion accurately.
+                    Return ONLY the repaired Courier screenplay text with no markdown backticks and no conversational commentary.
                     """
                     repaired = call_cinematex_ai(api_key, fix_prompt, expect_json=False)
                     if repaired:
@@ -593,7 +596,7 @@ elif st.session_state["current_view"] == "MANUAL_IDE":
     with col_preview:
         st.markdown("### 🖥️ LIVE SYNTAX CHECKER HUD")
         
-  lines = typed_script.split("\n")
+        lines = typed_script.split("\n")
         rendered_html = ['<div class="manual-screen-dark scroll-container">']
         error_count = 0
         error_details = []
@@ -615,7 +618,7 @@ elif st.session_state["current_view"] == "MANUAL_IDE":
             else:
                 error_count += 1
                 error_details.append((idx, line, msg))
-                rendered_html.append(f'<span class="code-line-red"><b>[L{idx}]</b> {escaped_line} <br><span style="font-size:10.5px; color:#ffb3c6; font-family:sans-serif;">⚠️ {msg}</span></span>')
+                rendered_html.append(f'<span class="code-line-red"><b>[L{idx}]</b> {escaped_line}<br><span style="font-size:11px; color:#ffb3c6; font-family:sans-serif;">⚠️ {msg}</span></span>')
 
         rendered_html.append('</div>')
         st.markdown("".join(rendered_html), unsafe_allow_html=True)
@@ -626,7 +629,7 @@ elif st.session_state["current_view"] == "MANUAL_IDE":
             st.markdown(f"<span class='time-badge' style='color:#ff0055; border-color:#ff0055;'>⚠️ SCRIPT WARNING: {error_count} RED SYNTAX ERRORS DETECTED</span>", unsafe_allow_html=True)
             for l_num, l_txt, reason in error_details[:3]:
                 st.caption(f"Line {l_num}: {reason}")
-            st.info("Click '💡 FIX ERROR & AUTO-CORRECT' to have AI automatically solve all red errors!")
+            st.info("Click '💡 FIX ERROR & AUTO-CORRECT' to have AI automatically repair all red errors!")
 
 # =============================================================
 # 4. AUTOMATED WORKSPACE (WITH COMIC STORYBOARD PANELS)
@@ -739,7 +742,6 @@ elif st.session_state["current_view"] == "WORKSPACE":
                 script_formatted = p_data.get("formatted_script", "Script not ready.")
                 st.markdown(f'<div class="scroll-container"><div class="manual-screen-dark" style="color:#f8fafc;">{script_formatted}</div></div>', unsafe_allow_html=True)
 
-            # TAB: COMIC STORYBOARD DRAWINGS
             with tab_comic:
                 st.markdown("### 🎨 DYNAMIC GRAPHIC NOVEL COMIC STORYBOARD")
                 st.caption("Auto-generated visual comic panels. Scroll through all sequential pages below:")
@@ -760,7 +762,6 @@ elif st.session_state["current_view"] == "WORKSPACE":
                         </div>
                         """, unsafe_allow_html=True)
 
-                        # Render Clean Comic Drawing
                         encoded_prompt = urllib.parse.quote(f"{p.get('visual_image_prompt', 'comic ink drawing')} --no realistic photo")
                         comic_img_url = f"[https://image.pollinations.ai/prompt/](https://image.pollinations.ai/prompt/){encoded_prompt}?width=800&height=450&nologo=true&seed=42"
                         
@@ -1007,7 +1008,7 @@ elif st.session_state["current_view"] == "EXPORTED":
         if not items:
             st.info("No exported PDFs found.")
         else:
-            for item in items:
+            for item in exported_items:
                 col_e1, col_e2 = st.columns([3, 1])
                 with col_e1:
                     st.markdown(f"### 📄 {item['title']}")
