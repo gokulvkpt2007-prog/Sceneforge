@@ -64,7 +64,6 @@ st.markdown("""
         box-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
     }
 
-    /* Screenplay Syntax Checker Displays */
     .manual-screen-dark {
         background-color: #020204;
         border: 2px solid #1a1a2e;
@@ -150,7 +149,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------------------
-# SUPABASE & STATE INITIALIZATION
+# SUPABASE CONNECTION CONFIG
 # -------------------------------------------------------------
 SUPABASE_URL = "https://YOUR_SUPABASE_PROJECT_URL.supabase.co"
 SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY"
@@ -164,10 +163,13 @@ def get_supabase():
 
 supabase: Client = get_supabase()
 
+# -------------------------------------------------------------
+# PERSISTENT SESSION & STATE RESTORATION ENGINE
+# -------------------------------------------------------------
 if "user" not in st.session_state:
     st.session_state["user"] = None
 if "current_view" not in st.session_state:
-    st.session_state["current_view"] = "HUB"
+    st.session_state["current_view"] = st.query_params.get("view", "HUB")
 if "active_project" not in st.session_state:
     st.session_state["active_project"] = {"title": "Untitled Sequence", "script": "", "data": None}
 if "manual_script_input" not in st.session_state:
@@ -176,6 +178,19 @@ if "learn_step" not in st.session_state:
     st.session_state["learn_step"] = 0
 if "mentor_chat" not in st.session_state:
     st.session_state["mentor_chat"] = []
+
+# Persistent login check via refresh token query parameter
+if st.session_state["user"] is None and "token" in st.query_params:
+    try:
+        res = supabase.auth.get_user(st.query_params["token"])
+        if res and res.user:
+            st.session_state["user"] = res.user
+    except Exception:
+        pass
+
+def set_active_view(view_name):
+    st.session_state["current_view"] = view_name
+    st.query_params["view"] = view_name
 
 def get_current_ist_time():
     tz = pytz.timezone('Asia/Kolkata')
@@ -202,7 +217,7 @@ def save_user_progress(user_id):
     except Exception:
         pass
 
-# Robust Gemini API Engine (3.6-flash, 3.7-flash, 3.5-flash-lite)
+# Robust Gemini API Engine
 def call_cinematex_ai(api_key, prompt, expect_json=True):
     models = ['gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-3.5-flash-lite']
     client = genai.Client(api_key=api_key)
@@ -247,18 +262,6 @@ def generate_dossier_pdf(title, raw_text, p_data, timestamp):
     script_content = p_data.get("formatted_script", "") if isinstance(p_data, dict) else ""
     pdf.multi_cell(content_w, 5, safe_pdf_text(script_content))
     pdf.ln(6)
-
-    # 2. Storyboard Prompts in Dossier
-    if isinstance(p_data, dict) and p_data.get("storyboard_prompts"):
-        pdf.set_font("Helvetica", 'B', 13)
-        pdf.cell(content_w, 10, safe_pdf_text("2. STORYBOARD PRODUCTION PROMPTS"), new_x="LMARGIN", new_y="NEXT")
-        for idx, p in enumerate(p_data.get("storyboard_prompts", []), 1):
-            pdf.set_font("Helvetica", 'B', 9)
-            pdf.cell(content_w, 6, safe_pdf_text(f"Frame {idx} Prompt:"), new_x="LMARGIN", new_y="NEXT")
-            pdf.set_font("Helvetica", 'I', 8)
-            pdf.multi_cell(content_w, 5, safe_pdf_text(p))
-            pdf.ln(2)
-
     return bytes(pdf.output())
 
 # -------------------------------------------------------------
@@ -269,38 +272,30 @@ def analyze_screenplay_line(line, prev_line_type="EMPTY"):
     if not raw:
         return True, "EMPTY", ""
 
-    # 1. Standard Slugline (Must start with INT. or EXT.)
     if re.match(r'^(INT\.|EXT\.|INT\./EXT\.)\s+[A-Z0-9\s\-\.\/\'\"]+', raw):
         return True, "SLUGLINE", "Valid Scene Heading"
 
     if any(raw.upper().startswith(p) for p in ["INT ", "EXT ", "SCENE ", "OPENING ", "SHOT "]):
         return False, "INVALID_SLUGLINE", "Invalid Slugline! Must strictly start with INT. or EXT. (e.g., INT. HOUSE - NIGHT)"
 
-    # 2. Strict Character Cue (Must be purely UPPERCASE, <= 4 words, no punctuation)
     if raw.isupper() and len(raw.split()) <= 4 and not any(char in raw for char in [".", ",", ":", ";", "!", "?"]):
         return True, "CHARACTER", "Valid Character Heading"
 
-    # 3. Parenthetical directive
     if raw.startswith("(") and raw.endswith(")"):
         return True, "PARENTHETICAL", "Valid Actor Cue"
 
-    # 4. RED FLAG: Novel/Conversational Passage Dialogue in Quotes
     if '"' in raw or "'" in raw:
-        return False, "NOVEL_DIALOGUE", "Novel format detected! Put Character Name in UPPERCASE above, then Dialogue below."
+        return False, "NOVEL_DIALOGUE", "Novel format detected! Screenplay dialogues cannot be inside quotes within paragraphs. Put Character Name in UPPERCASE above, then Dialogue below."
 
-    # 5. RED FLAG: Casual dialogue markers
     if re.search(r'\b(nu solra|nu kekuran|nu kathuran|solran|kekra|solra)\b', raw, re.IGNORECASE):
         return False, "CASUAL_PASSAGE", "Conversational storytelling detected. Format into Character Cue followed by dialogue line."
 
-    # 6. Valid Dialogue Line
     if prev_line_type in ["CHARACTER", "PARENTHETICAL"]:
         return True, "DIALOGUE", "Valid Dialogue Line"
 
-    # 7. Visual Action Line check
     if re.search(r'\b(open agudhu|revel panrom|pakrom|camera angle)\b', raw, re.IGNORECASE):
-        return False, "DIRECTOR_COMMENTARY", "Don't write director commentary. Write what the lens sees physically."
+        return False, "DIRECTOR_COMMENTARY", "Don't write director talk ('revel panrom', 'camera angle'). Write what the camera sees physically."
 
-    # 8. Unfilmable mental thoughts check
     unfilmable_words = [r'\bfeels?\b', r'\bthinking\b', r'\bthinks?\b', r'\bremembers?\b', r'\bguilty\b']
     for trig in unfilmable_words:
         if re.search(trig, raw, re.IGNORECASE):
@@ -398,7 +393,8 @@ if st.session_state["user"] is None:
                         res = supabase.auth.sign_in_with_password({"email": email.strip(), "password": password})
                         st.session_state["user"] = res.user
                         load_user_progress(res.user.id)
-                        st.session_state["current_view"] = "HUB"
+                        st.query_params["token"] = res.session.access_token
+                        set_active_view("HUB")
                         st.rerun()
                     except Exception as e:
                         st.error(f"Login failed: {e}")
@@ -412,7 +408,9 @@ if st.session_state["user"] is None:
                         if res.user:
                             st.session_state["user"] = res.user
                             load_user_progress(res.user.id)
-                            st.session_state["current_view"] = "HUB"
+                            if res.session:
+                                st.query_params["token"] = res.session.access_token
+                            set_active_view("HUB")
                             st.rerun()
                     except Exception as e:
                         st.error(f"Registration error: {e}")
@@ -431,7 +429,8 @@ with col_nav3:
         save_user_progress(st.session_state["user"].id)
         supabase.auth.sign_out()
         st.session_state["user"] = None
-        st.session_state["current_view"] = "HUB"
+        st.query_params.clear()
+        set_active_view("HUB")
         st.rerun()
 
 # =============================================================
@@ -442,14 +441,13 @@ if st.session_state["current_view"] == "HUB":
     st.markdown("<h2 style='text-align:center; font-family:Orbitron; color:#ffe600;'>⚡ STUDIO COMMAND NEXUS</h2>", unsafe_allow_html=True)
     st.write("")
 
-    # TOP BIG HERO CARD: ACADEMY & MENTOR BOT
     st.markdown("""
     <div class="hero-learn-card">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <div>
                 <span class="time-badge" style="color:#c084fc; border-color:#c084fc;">CINEMA MASTERCLASS // ZERO TO PRO</span>
                 <h2 style="font-family:Orbitron; color:#00f0ff; margin-top:8px; margin-bottom:4px;">🎓 SCRIPTWRITING ACADEMY & AI MENTOR</h2>
-                <p style="color:#e2e8f0; font-size:15px; margin:0;">Learn screenplay architecture step-by-step with auto-save progress, then unlock your private AI Mentor talking bot!</p>
+                <p style="color:#e2e8f0; font-size:15px; margin:0;">Learn screenplay architecture step-by-step with cloud auto-save, then unlock your private AI Mentor talking bot!</p>
             </div>
             <div style="font-size:3.5rem;">📜</div>
         </div>
@@ -457,7 +455,7 @@ if st.session_state["current_view"] == "HUB":
     """, unsafe_allow_html=True)
     
     if st.button("ENTER ACADEMY & CHATBOT MENTOR ➔", use_container_width=True):
-        st.session_state["current_view"] = "LEARN_ACADEMY"
+        set_active_view("LEARN_ACADEMY")
         st.rerun()
 
     st.write("")
@@ -469,11 +467,11 @@ if st.session_state["current_view"] == "HUB":
         <div class="mini-card">
             <h2 style="margin:0;">✍️</h2>
             <h4 style="color:#00ff66; margin-top:6px;">MANUAL IDE</h4>
-            <p style="color:#94a3b8; font-size:12px;">Live Green/Red syntax checking & AI Auto-Correct.</p>
+            <p style="color:#94a3b8; font-size:12px;">Live Green/Red syntax checking, exports & AI Auto-Correct.</p>
         </div>
         """, unsafe_allow_html=True)
         if st.button("LAUNCH MANUAL IDE ➔", key="btn_manual", use_container_width=True):
-            st.session_state["current_view"] = "MANUAL_IDE"
+            set_active_view("MANUAL_IDE")
             st.rerun()
 
     with col_w2:
@@ -481,12 +479,12 @@ if st.session_state["current_view"] == "HUB":
         <div class="mini-card">
             <h2 style="margin:0;">⚡</h2>
             <h4 style="color:#00f0ff; margin-top:6px;">QUANTUM FORGE</h4>
-            <p style="color:#94a3b8; font-size:12px;">Auto-forge Courier scripts & Storyboard Prompts.</p>
+            <p style="color:#94a3b8; font-size:12px;">Auto-forge Courier screenplay & AI Storyboard Prompts.</p>
         </div>
         """, unsafe_allow_html=True)
         if st.button("LAUNCH AUTO-FORGE ➔", key="btn_auto", use_container_width=True):
             st.session_state["active_project"] = {"title": "Untitled Sequence", "script": "", "data": None}
-            st.session_state["current_view"] = "WORKSPACE"
+            set_active_view("WORKSPACE")
             st.rerun()
 
     with col_w3:
@@ -498,7 +496,7 @@ if st.session_state["current_view"] == "HUB":
         </div>
         """, unsafe_allow_html=True)
         if st.button("OPEN VAULT ➔", key="btn_vault", use_container_width=True):
-            st.session_state["current_view"] = "SAVED"
+            set_active_view("SAVED")
             st.rerun()
 
     with col_w4:
@@ -510,17 +508,17 @@ if st.session_state["current_view"] == "HUB":
         </div>
         """, unsafe_allow_html=True)
         if st.button("VIEW PDFS ➔", key="btn_dossier", use_container_width=True):
-            st.session_state["current_view"] = "EXPORTED"
+            set_active_view("EXPORTED")
             st.rerun()
 
 # =============================================================
-# 3. MANUAL SCRIPTWRITING WORKSPACE (LIVE SYNTAX & DIRECT EXPORT)
+# 3. MANUAL SCRIPTWRITING WORKSPACE (LIVE SYNTAX & EXPORTS)
 # =============================================================
 elif st.session_state["current_view"] == "MANUAL_IDE":
     col_mback, col_mhead = st.columns([1, 4])
     with col_mback:
         if st.button("⬅️ COMMAND NEXUS"):
-            st.session_state["current_view"] = "HUB"
+            set_active_view("HUB")
             st.rerun()
     with col_mhead:
         st.markdown("<h2 style='font-family:Orbitron; color:#00ff66; margin:0;'>✍️ MANUAL SCREENPLAY TERMINAL (LIVE SYNTAX DOCTOR)</h2>", unsafe_allow_html=True)
@@ -658,11 +656,11 @@ elif st.session_state["current_view"] == "MANUAL_IDE":
             st.info("Click '💡 FIX ERROR & AUTO-CORRECT' to have AI automatically repair all red errors!")
 
 # =============================================================
-# 4. AUTOMATED WORKSPACE (QUANTUM FORGE WITH STORYBOARD PROMPTS)
+# 4. AUTOMATED WORKSPACE (QUANTUM FORGE & STORYBOARDS)
 # =============================================================
 elif st.session_state["current_view"] == "WORKSPACE":
     if st.button("⬅️ BACK TO COMMAND NEXUS"):
-        st.session_state["current_view"] = "HUB"
+        set_active_view("HUB")
         st.rerun()
 
     col_side, col_main = st.columns([1, 2.5], gap="medium")
@@ -731,8 +729,7 @@ elif st.session_state["current_view"] == "WORKSPACE":
                     ---
                     REQUIREMENTS:
                     1. "formatted_script": Flawless industry screenplay (SLUGLINES, visual action lines, centered character names, parentheticals, sharp dialogue).
-                    2. "storyboard_prompts": ULTRA-DETAILED visual AI prompts for Midjourney v6 / Flux.
-                       Each prompt must specify: Framing & camera lens (e.g., 35mm Anamorphic, shallow depth of field), subject action, lighting setup, atmosphere, cinematic color grade, photorealistic movie still, --ar 16:9.
+                    2. "storyboard_prompts": ULTRA-DETAILED visual prompts ready for Midjourney v6 and Flux (camera lens, depth of field, framing, lighting setup, atmosphere, cinematic color grade, photorealistic movie still, --ar 16:9).
                     3. "scene_beats": "scene_title", "emotional_tone", "tension_rating", "micro_beats", "director_vision".
                     4. "characters": "name", "role", "appearance", "quirks", "core_conflict".
                     5. "shot_list": "scene_no", "shot_type", "camera_angle", "lighting_setup", "sound_cue".
@@ -766,7 +763,7 @@ elif st.session_state["current_view"] == "WORKSPACE":
 
             with tab_sb:
                 st.markdown("### 🎨 CINEMATIC STORYBOARD PROMPTS")
-                st.caption("Detailed Midjourney v6 / Flux prompts. Click the copy icon on the right to copy directly into AI image generators:")
+                st.caption("Detailed Midjourney v6 / Flux prompts. Click the copy icon on the right to copy directly:")
                 sb_prompts = p_data.get("storyboard_prompts", [])
                 if not sb_prompts:
                     st.info("No storyboard prompts generated. Re-execute Forge.")
@@ -842,7 +839,7 @@ elif st.session_state["current_view"] == "LEARN_ACADEMY":
     with col_aback:
         if st.button("⬅️ COMMAND NEXUS"):
             save_user_progress(st.session_state["user"].id)
-            st.session_state["current_view"] = "HUB"
+            set_active_view("HUB")
             st.rerun()
     with col_ahead:
         st.markdown("<h2 style='font-family:Orbitron; color:#c084fc; margin:0;'>🎓 SCRIPTWRITING MASTERCLASS</h2>", unsafe_allow_html=True)
@@ -963,7 +960,7 @@ elif st.session_state["current_view"] == "LEARN_ACADEMY":
 # =============================================================
 elif st.session_state["current_view"] == "SAVED":
     if st.button("⬅️ BACK TO COMMAND NEXUS"):
-        st.session_state["current_view"] = "HUB"
+        set_active_view("HUB")
         st.rerun()
 
     st.markdown("<h2 style='font-family:Orbitron; color:#ffe600;'>📂 SAVED PROJECTS VAULT</h2>", unsafe_allow_html=True)
@@ -984,14 +981,14 @@ elif st.session_state["current_view"] == "SAVED":
                     if st.button("LOAD SEQUENCE", key=f"load_{item['id']}", use_container_width=True):
                         if is_man:
                             st.session_state["manual_script_input"] = item["script_content"]
-                            st.session_state["current_view"] = "MANUAL_IDE"
+                            set_active_view("MANUAL_IDE")
                         else:
                             st.session_state["active_project"] = {
                                 "title": item["title"],
                                 "script": item["script_content"],
                                 "data": item["parsed_data"]
                             }
-                            st.session_state["current_view"] = "WORKSPACE"
+                            set_active_view("WORKSPACE")
                         st.rerun()
                 with col_del:
                     if st.button("🗑️", key=f"del_{item['id']}", use_container_width=True):
@@ -1006,7 +1003,7 @@ elif st.session_state["current_view"] == "SAVED":
 # =============================================================
 elif st.session_state["current_view"] == "EXPORTED":
     if st.button("⬅️ BACK TO COMMAND NEXUS"):
-        st.session_state["current_view"] = "HUB"
+        set_active_view("HUB")
         st.rerun()
 
     st.markdown("<h2 style='font-family:Orbitron; color:#00f0ff;'>📦 EXPORTED PDF DOSSIERS</h2>", unsafe_allow_html=True)
@@ -1016,7 +1013,7 @@ elif st.session_state["current_view"] == "EXPORTED":
         if not items:
             st.info("No exported PDFs found.")
         else:
-            for item in items:
+            for item in exported_items:
                 col_e1, col_e2 = st.columns([3, 1])
                 with col_e1:
                     st.markdown(f"### 📄 {item['title']}")
