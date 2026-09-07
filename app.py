@@ -789,10 +789,19 @@ elif st.session_state["current_view"] == "WORKSPACE":
                         </div>
                         """, unsafe_allow_html=True)
 
-                        encoded_prompt = urllib.parse.quote(f"{p.get('visual_image_prompt', 'comic ink drawing')} --no realistic photo")
-                        comic_img_url = f"[https://image.pollinations.ai/prompt/](https://image.pollinations.ai/prompt/){encoded_prompt}?width=800&height=450&nologo=true&seed=42"
+                        clean_prompt = p.get('visual_image_prompt', 'comic ink drawing').replace('"', "'")
+                        encoded_prompt = urllib.parse.quote(f"{clean_prompt} --no realistic photo")
+                        comic_img_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=800&height=450&nologo=true"
                         
-                        st.image(comic_img_url, caption=f"Panel Narrative: {p.get('caption', '')}", use_container_width=True)
+                        # Browser-native render to prevent Streamlit MediaFileStorage crashes
+                        st.markdown(f"""
+                        <div style="text-align: center; margin: 10px 0 15px 0;">
+                            <img src="{comic_img_url}" style="width: 100%; max-width: 800px; border-radius: 8px; border: 1px solid #2e1d50; box-shadow: 0 0 15px rgba(0, 240, 255, 0.15);" loading="lazy" alt="Comic Storyboard Panel" />
+                            <div style="color: #94a3b8; font-size: 13px; margin-top: 6px; font-style: italic;">
+                                💬 Panel Narrative: {p.get('caption', '')}
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
                         st.write("")
                     st.markdown('</div>', unsafe_allow_html=True)
 
