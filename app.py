@@ -1,4 +1,3 @@
-
 import streamlit as st
 from google import genai
 from supabase import create_client, Client
@@ -10,11 +9,21 @@ from fpdf import FPDF
 import io
 
 # -------------------------------------------------------------
-# PAGE CONFIGURATION
+# CUSTOM CYBER CINEMA FAVICON (SVG DATA-URI)
 # -------------------------------------------------------------
+CYBER_FAVICON = """data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="%230b0717"/>
+  <rect x="6" y="6" width="52" height="52" rx="10" fill="none" stroke="%23ff007f" stroke-width="2.5" stroke-dasharray="6,3"/>
+  <circle cx="32" cy="32" r="18" fill="%23120b22" stroke="%2300f0ff" stroke-width="3"/>
+  <circle cx="32" cy="32" r="9" fill="%23ffe600" opacity="0.9"/>
+  <circle cx="32" cy="32" r="4" fill="%23ffffff"/>
+  <path d="M32 10 L32 20 M32 44 L32 54 M10 32 L20 32 M44 32 L54 32" stroke="%2300f0ff" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="48" cy="16" r="3" fill="%23ff007f"/>
+</svg>"""
+
 st.set_page_config(
     page_title="CINEMATEX // NEURAL CINEMA DECK",
-    page_icon="⚡",
+    page_icon=CYBER_FAVICON,
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -68,8 +77,9 @@ st.markdown("""
         border: 2px solid #ff007f;
         box-shadow: 0 0 20px rgba(255, 0, 127, 0.25);
         border-radius: 12px;
-        padding: 24px;
+        padding: 22px 18px;
         text-align: center;
+        min-height: 220px;
         transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
     .funky-card:hover {
@@ -122,6 +132,7 @@ st.markdown("""
     }
     .cyber-card-alt { border-left: 5px solid #ff0055; }
     .cyber-card-gold { border-left: 5px solid #ffe600; }
+    .cyber-card-purple { border-left: 5px solid #a855f7; }
 
     .stTextInput input, .stTextArea textarea {
         background-color: #0c0817 !important;
@@ -165,8 +176,8 @@ st.markdown("""
 # -------------------------------------------------------------
 # SUPABASE CONNECTION CONFIG
 # -------------------------------------------------------------
-SUPABASE_URL = "https://xiicgxqmmrvvvgdvkbej.supabase.co"
-SUPABASE_KEY = "sb_publishable_l3TcwbLc7Dm9X-Ji-7bJdw_M0ey36-8"
+SUPABASE_URL = "https://YOUR_SUPABASE_PROJECT_URL.supabase.co"
+SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY"
 
 @st.cache_resource
 def get_supabase():
@@ -194,7 +205,6 @@ def get_current_ist_time():
 def safe_pdf_text(text):
     if not text:
         return ""
-    # Safe ASCII sanitization to prevent unicode exceptions
     return str(text).encode('ascii', 'ignore').decode('ascii')
 
 def generate_dossier_pdf(title, raw_text, p_data, timestamp):
@@ -204,7 +214,6 @@ def generate_dossier_pdf(title, raw_text, p_data, timestamp):
     pdf.set_right_margin(15)
     pdf.add_page()
     
-    # Effective printable width
     content_w = pdf.epw
 
     # Title & Header
@@ -268,7 +277,7 @@ def generate_dossier_pdf(title, raw_text, p_data, timestamp):
 # =============================================================
 if st.session_state["user"] is None:
     st.write("")
-    st.markdown('<div class="funky-title" style="text-align:center;"> ⚡CINEMATEX </div>', unsafe_allow_html=True)
+    st.markdown('<div class="funky-title" style="text-align:center;">⚡ CINEMATEX // ACCESS</div>', unsafe_allow_html=True)
     st.markdown('<div class="funky-subtitle" style="text-align:center;">NEURAL PRE-PRODUCTION ENGINE FOR SCREENWRITERS</div>', unsafe_allow_html=True)
     st.write("")
 
@@ -323,21 +332,22 @@ with col_nav3:
         st.rerun()
 
 # =============================================================
-# 2. STUDIO COMMAND NEXUS (HUB)
+# 2. STUDIO COMMAND NEXUS (HUB) - WITH 4 PILLARS
 # =============================================================
 if st.session_state["current_view"] == "HUB":
     st.write("")
     st.markdown("<h2 style='text-align:center; font-family:Orbitron; color:#ffe600;'>⚡ STUDIO COMMAND NEXUS</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center; color:#94a3b8;'>Select your pre-production trajectory below</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center; color:#94a3b8;'>Select your pre-production trajectory or master the craft below</p>", unsafe_allow_html=True)
     st.write("")
 
-    col_h1, col_h2, col_h3 = st.columns(3, gap="medium")
+    col_h1, col_h2, col_h3, col_h4 = st.columns(4, gap="small")
+    
     with col_h1:
         st.markdown("""
         <div class="funky-card">
             <h1 style="margin:0;">🚀</h1>
-            <h3 style="color:#00f0ff; margin-top:10px;">CREATE NEW PROJECT</h3>
-            <p style="color:#94a3b8; font-size:14px;">Ingest raw story passages, casual narrations, or dialogues in Tamil, Tanglish, or English.</p>
+            <h4 style="color:#00f0ff; margin-top:8px;">QUANTUM FORGE</h4>
+            <p style="color:#94a3b8; font-size:13px;">Convert raw story passages into Courier scripts & breakdown matrices.</p>
         </div>
         """, unsafe_allow_html=True)
         if st.button("ENTER WORKSPACE ➔", key="btn_new", use_container_width=True):
@@ -347,22 +357,34 @@ if st.session_state["current_view"] == "HUB":
 
     with col_h2:
         st.markdown("""
+        <div class="funky-card" style="border-color:#a855f7; box-shadow:0 0 20px rgba(168, 85, 247, 0.25);">
+            <h1 style="margin:0;">🎓</h1>
+            <h4 style="color:#c084fc; margin-top:8px;">WRITING ACADEMY</h4>
+            <p style="color:#94a3b8; font-size:13px;">Master screenplay formatting, 3-act structure, beats & subtext step-by-step.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("START MASTERCLASS ➔", key="btn_academy", use_container_width=True):
+            st.session_state["current_view"] = "ACADEMY"
+            st.rerun()
+
+    with col_h3:
+        st.markdown("""
         <div class="funky-card" style="border-color:#ffe600; box-shadow:0 0 20px rgba(255, 230, 0, 0.2);">
             <h1 style="margin:0;">📂</h1>
-            <h3 style="color:#ffe600; margin-top:10px;">SAVED VAULT</h3>
-            <p style="color:#94a3b8; font-size:14px;">Screenplays and breakdown matrix preserved with accurate timestamps.</p>
+            <h4 style="color:#ffe600; margin-top:8px;">SAVED VAULT</h4>
+            <p style="color:#94a3b8; font-size:13px;">Load or delete saved drafts preserved with precise timestamps.</p>
         </div>
         """, unsafe_allow_html=True)
         if st.button("OPEN VAULT ➔", key="btn_saved", use_container_width=True):
             st.session_state["current_view"] = "SAVED"
             st.rerun()
 
-    with col_h3:
+    with col_h4:
         st.markdown("""
         <div class="funky-card" style="border-color:#00f0ff; box-shadow:0 0 20px rgba(0, 240, 255, 0.2);">
             <h1 style="margin:0;">📦</h1>
-            <h3 style="color:#00f0ff; margin-top:10px;">EXPORTED DOSSIERS</h3>
-            <p style="color:#94a3b8; font-size:14px;">Download packaged cinema production kits directly as PDF documents.</p>
+            <h4 style="color:#00f0ff; margin-top:8px;">EXPORTED DOSSIERS</h4>
+            <p style="color:#94a3b8; font-size:13px;">Download packaged cinema production kits directly as PDF documents.</p>
         </div>
         """, unsafe_allow_html=True)
         if st.button("ACCESS PDFS ➔", key="btn_exported", use_container_width=True):
@@ -370,7 +392,207 @@ if st.session_state["current_view"] == "HUB":
             st.rerun()
 
 # =============================================================
-# 3. WORKSPACE (QUANTUM FORGE)
+# 3. SCRIPT WRITING ACADEMY (LEVEL-BY-LEVEL MASTERCLASS)
+# =============================================================
+elif st.session_state["current_view"] == "ACADEMY":
+    col_aback, col_ahead = st.columns([1, 4])
+    with col_aback:
+        if st.button("⬅️ COMMAND NEXUS"):
+            st.session_state["current_view"] = "HUB"
+            st.rerun()
+    with col_ahead:
+        st.markdown("<h2 style='font-family:Orbitron; color:#c084fc; margin:0;'>🎓 CINEMATEX SCREENWRITING ACADEMY</h2>", unsafe_allow_html=True)
+        st.caption("From Raw Narrative Thought to Industry Mastercraft // Level-by-Level Curriculum")
+
+    st.write("")
+
+    # Level Selector Tabs
+    lvl_tab1, lvl_tab2, lvl_tab3, lvl_tab4, lvl_tab5 = st.tabs([
+        "LEVEL 1: SCRIPT ANATOMY",
+        "LEVEL 2: 3-ACT ARCHITECTURE",
+        "LEVEL 3: CHARACTER MOTIVES",
+        "LEVEL 4: SCENE TENSION & SUBTEXT",
+        "LEVEL 5: RAW PASSAGE VS COURIER SCRIPT"
+    ])
+
+    # LEVEL 1
+    with lvl_tab1:
+        st.markdown('<div class="scroll-container">', unsafe_allow_html=True)
+        st.markdown("""
+        <div class="cyber-card cyber-card-purple">
+            <h3 style="color:#c084fc; margin:0;">LEVEL 1: THE 5 SACRED ELEMENTS OF A SCREENPLAY</h3>
+            <p style="color:#94a3b8; font-size:14px; margin-top:4px;">A script is not a novel; it is an architectural blueprint for camera, actors, and sound.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        ### 1. Scene Heading (Slugline)
+        Tells the production crew **Where** and **When** the camera is rolling.
+        * **INT.** (Interior) / **EXT.** (Exterior)
+        * Location (e.g. `MADRAS CENTRAL PLATFORM 4`)
+        * Time (e.g. `NIGHT`, `DAWN`, `CONTINUOUS`)
+        > **Example:** `EXT. ABANDONED HARBOR WAREHOUSE - RAINY NIGHT`
+
+        ### 2. Action Lines
+        Visual and auditory descriptions only. **Rule: If the camera cannot capture it or the mic cannot record it, do NOT write it.**
+        * ❌ *Wrong:* "Vikram is thinking about his mother's murder 10 years ago." *(Mind thoughts cannot be seen!)*
+        * ✅ *Right:* "Vikram stares down at a tarnished gold watch, his knuckles white around the glass face. Rain lashes against his collar."
+
+        ### 3. Character Cue
+        The name of the character speaking, capitalized and centered before dialogue:
+        > `VIKRAM` or `VIKRAM (V.O.)` for Voice-Over / `(O.S.)` for Off-Screen.
+
+        ### 4. Parenthetical
+        An actor directive indicating attitude or micro-action. Use sparingly:
+        > `(whispering through clenched teeth)`
+
+        ### 5. Dialogue
+        What the character actually says out loud. Keep it distinct to their vocal rhythm.
+        """)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # LEVEL 2
+    with lvl_tab2:
+        st.markdown('<div class="scroll-container">', unsafe_allow_html=True)
+        st.markdown("""
+        <div class="cyber-card">
+            <h3 style="color:#00f0ff; margin:0;">LEVEL 2: THE HOLLYWOOD & TAMIL CINEMA 3-ACT MATRIX</h3>
+            <p style="color:#94a3b8; font-size:14px; margin-top:4px;">How 120 minutes of cinema maintains relentless pacing without losing audience attention.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        col_act1, col_act2, col_act3 = st.columns(3)
+        with col_act1:
+            st.markdown("""
+            #### ACT I: THE SETUP (Pages 1-30)
+            * **Ordinary World:** Show protagonist's daily routine & internal flaw.
+            * **Inciting Incident (Minute 10-12):** The disruptive event that shatters peace (e.g., murder, heist call, impossible discovery).
+            * **Plot Point 1 (Minute 25-30):** Point of No Return. Protagonist steps into the storm.
+            """)
+        with col_act2:
+            st.markdown("""
+            #### ACT II: CONFLICT & CRISIS (Pages 30-85)
+            * **Fun & Games / Trials:** First battles, chasing leads.
+            * **Midpoint Shift (Minute 55-60):** False victory or massive betrayal; stakes turn life-or-death.
+            * **All Hope Lost / Dark Night of Soul:** Protagonist hits rock bottom. Mentor falls or resources exhausted.
+            """)
+        with col_act3:
+            st.markdown("""
+            #### ACT III: RESOLUTION (Pages 85-115)
+            * **The Climax:** Final confrontation where external enemy and internal flaw are both conquered.
+            * **Catharsis:** Emotional payoff.
+            * **New Equilibrium:** The transformed world.
+            """)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # LEVEL 3
+    with lvl_tab3:
+        st.markdown('<div class="scroll-container">', unsafe_allow_html=True)
+        st.markdown("""
+        <div class="cyber-card cyber-card-alt">
+            <h3 style="color:#ff0055; margin:0;">LEVEL 3: CHARACTER PSYCHOLOGY & THE FATAL FLAW</h3>
+            <p style="color:#94a3b8; font-size:14px; margin-top:4px;">Great characters are not born from cool costumes; they are defined by their internal contradiction.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        ### The Trinity Engine of Character Design:
+        1. **The External WANT (Goal):** What the character chases consciously (e.g., Revenge against the drug cartel, finding stolen millions).
+        2. **The Internal NEED (Spiritual Growth):** What the character actually needs to become whole (e.g., Forgiving themselves for past guilt, learning to trust others).
+        3. **The Fatal Flaw (The Ghost):** The trauma or stubborn weakness that blinds them throughout Act I & II.
+        
+        > **Golden Pro-Tip:** A protagonist and antagonist should be two sides of the same coin. An ideal antagonist is the protagonist who made the wrong moral choice at their crossroad!
+        """)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # LEVEL 4
+    with lvl_tab4:
+        st.markdown('<div class="scroll-container">', unsafe_allow_html=True)
+        st.markdown("""
+        <div class="cyber-card cyber-card-gold">
+            <h3 style="color:#ffe600; margin:0;">LEVEL 4: SUBTEXT & "SHOW, DON'T TELL"</h3>
+            <p style="color:#94a3b8; font-size:14px; margin-top:4px;">Amateurs write what characters think; masters write what characters hide.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        ### What is Subtext?
+        Subtext is the silent emotion flowing underneath dialogue lines. When people are angry or grieving, they rarely say "I am hurt." They attack something else.
+        
+        * **Flat Dialogue (Zero Subtext):**
+          * *A:* "I am divorcing you because you don't love me anymore."
+          * *B:* "I am sad and guilty."
+        * **Cinematic Subtext Dialogue:**
+          * *A sets down a cup of cold tea without drinking it.*
+          * *A:* "You forgot the sugar again."
+          * *B stares at the cup.*
+          * *B:* "I've been remembering it for fifteen years, Priya."
+          * *(Audience understands: It's not about the sugar; the marriage is dead.)*
+
+        ### Micro-Tension in Scene Beats:
+        Every scene MUST enter with one status and exit with a reversed status (e.g., Hopeful ➔ Crushed, or Dominant ➔ Trapped). If a scene ends the same way it began, **CUT IT OUT.**
+        """)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # LEVEL 5
+    with lvl_tab5:
+        st.markdown('<div class="scroll-container">', unsafe_allow_html=True)
+        st.markdown("""
+        <div class="cyber-card">
+            <h3 style="color:#00f0ff; margin:0;">LEVEL 5: MASTERCLASS TRANSFORMATION LAB</h3>
+            <p style="color:#94a3b8; font-size:14px; margin-top:4px;">Observe how a raw conversational story draft evolves into an authentic film blueprint.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        col_t_left, col_t_right = st.columns(2)
+        with col_t_left:
+            st.markdown("#### 📝 RAW CONVERSATIONAL PASSAGE")
+            st.info("""
+            "Oru tea shop irukku night mazhai la. Vikram tea குடிச்சிட்டு irukkan. Appo oru black car vandhu nilludhu. Adhula irundhu oru aal erangi varan. Vikram-ah paathu 'Innum nee uyiroda irukiya' nu kekuran. Vikram sirichite avana shoot pannidran."
+            """)
+        with col_t_right:
+            st.markdown("#### 📜 INDUSTRY COURIER SCREENPLAY (STANDARDIZED)")
+            st.markdown("""
+            <div class="screenplay-box" style="font-size:0.85rem; padding:15px;">
+EXT. ROADSIDE TEA STALL - NIGHT (RAINING)
+
+Rain hammers against a rusted zinc sheet. Drops sizzle on a boiling milk kettle.
+
+VIKRAM (30s), drenched khaki jacket, sips black tea from a cracked tumbler. Steam veils his eyes.
+
+Headlights cut through the downpour. A matte-black Scorpio pulls up, engine purring like a caged beast.
+
+The door creaks open. DURAISAMY (50s) steps into the mud, his white veshti speckled with grease. He pulls a brass lighter, sparks a cigarette.
+
+DURAISAMY
+(smirking through smoke)
+Ten years in the swamp... innum uyiroda 
+dhaan irukiya, Vikram?
+
+Vikram doesn't blink. He slowly lowers the glass tumbler onto the wooden plank.
+
+VIKRAM
+(calm, flat)
+Oru tea kudika kooda nimadhi illa.
+
+UNDER THE BENCH --
+
+Vikram's right hand smoothly uncocks a snub-nosed revolver.
+
+BANG!
+
+Muzzle flash illuminates the pouring rain. Duraisamy's smirk freezes.
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.write("")
+        if st.button("🚀 READY TO FORGE MY STORY IN WORKSPACE ➔", use_container_width=True):
+            st.session_state["current_view"] = "WORKSPACE"
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+# =============================================================
+# 4. WORKSPACE (QUANTUM FORGE)
 # =============================================================
 elif st.session_state["current_view"] == "WORKSPACE":
     if st.button("⬅️ BACK TO COMMAND NEXUS"):
@@ -382,7 +604,6 @@ elif st.session_state["current_view"] == "WORKSPACE":
     with col_side:
         st.markdown("### 🕹️ CONTROLS & ENGINE")
         
-        # Background Key Integration
         api_key = st.secrets.get("GEMINI_API_KEY", "")
         if api_key:
             st.markdown("<span class='time-badge' style='color:#00f0ff; border-color:#00f0ff;'>⚡ NEURAL ENGINE: LINKED & ACTIVE</span>", unsafe_allow_html=True)
@@ -547,7 +768,7 @@ elif st.session_state["current_view"] == "WORKSPACE":
                 st.dataframe(p_data.get("shot_list", []), use_container_width=True)
                 st.markdown('</div>', unsafe_allow_html=True)
 
-            # TAB 4: STORYBOARD PROMPTS (MIDJOURNEY/FLUX)
+            # TAB 4: STORYBOARD PROMPTS
             with tab4:
                 st.caption("ULTRA-DETAILED PROMPTS (READY TO COPY INTO MIDJOURNEY V6 / FLUX):")
                 st.markdown('<div class="scroll-container">', unsafe_allow_html=True)
@@ -582,7 +803,7 @@ elif st.session_state["current_view"] == "WORKSPACE":
                     st.success("PDF exported and archived into Exported Dossiers!")
 
 # =============================================================
-# 4. SAVED VAULT
+# 5. SAVED VAULT (WITH LOAD & PERMANENT DELETE)
 # =============================================================
 elif st.session_state["current_view"] == "SAVED":
     if st.button("⬅️ BACK TO COMMAND NEXUS"):
@@ -621,7 +842,7 @@ elif st.session_state["current_view"] == "SAVED":
         st.error(f"Error accessing vault: {e}")
 
 # =============================================================
-# 5. EXPORTED DOSSIERS (PDF VAULT)
+# 6. EXPORTED DOSSIERS (PDF VAULT)
 # =============================================================
 elif st.session_state["current_view"] == "EXPORTED":
     if st.button("⬅️ BACK TO COMMAND NEXUS"):
