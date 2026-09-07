@@ -151,8 +151,8 @@ st.markdown("""
 # -------------------------------------------------------------
 # SUPABASE CONNECTION CONFIG
 # -------------------------------------------------------------
-SUPABASE_URL = "https://YOUR_SUPABASE_PROJECT_URL.supabase.co"
-SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY"
+SUPABASE_URL = "https://xiicgxqmmrvvvgdvkbej.supabase.co"
+SUPABASE_KEY = "sb_publishable_l3TcwbLc7Dm9X-Ji-7bJdw_M0ey36-8"
 
 @st.cache_resource
 def get_supabase():
@@ -373,7 +373,7 @@ Ovvoru thani scene-ukkum mini 3-Act structure irukkum:
 # =============================================================
 if st.session_state["user"] is None:
     st.write("")
-    st.markdown('<div class="funky-title" style="text-align:center;">⚡ CINEMATEX // ACCESS</div>', unsafe_allow_html=True)
+    st.markdown('<div class="funky-title" style="text-align:center;">⚡ CINEMATEX </div>', unsafe_allow_html=True)
     st.markdown('<div style="text-align:center; color:#00f0ff; font-family:Orbitron;">NEURAL PRE-PRODUCTION DECK & SCRIPTWRITING ACADEMY</div>', unsafe_allow_html=True)
     st.write("")
 
