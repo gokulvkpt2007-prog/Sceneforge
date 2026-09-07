@@ -543,11 +543,40 @@ elif st.session_state["current_view"] == "MANUAL_IDE":
         )
         st.session_state["manual_script_input"] = typed_script
 
-        col_b1, col_b2 = st.columns(2)
+     col_b1, col_b2 = st.columns(2)
         with col_b1:
-            save_manual_btn = st.button("💾 SAVE MANUAL SCRIPT", use_container_width=True)
+            save_manual_btn = st.button("💾 SAVE TO VAULT", use_container_width=True)
         with col_b2:
             fix_btn = st.button("💡 FIX ERROR & AUTO-CORRECT", use_container_width=True)
+
+        col_exp1, col_exp2 = st.columns(2)
+        ts_now = get_current_ist_time()
+        
+        # 1. Direct Courier PDF Export
+        with col_exp1:
+            manual_pdf_bytes = generate_dossier_pdf(
+                m_title, 
+                typed_script, 
+                {"formatted_script": typed_script}, 
+                ts_now
+            )
+            st.download_button(
+                label="📄 EXPORT PDF SCRIPT",
+                data=manual_pdf_bytes,
+                file_name=f"{m_title.replace(' ', '_')}_Script.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+
+        # 2. Direct Screenplay Fountain/Text Export
+        with col_exp2:
+            st.download_button(
+                label="📥 EXPORT TEXT (.TXT)",
+                data=typed_script,
+                file_name=f"{m_title.replace(' ', '_')}.txt",
+                mime="text/plain",
+                use_container_width=True
+            )
 
         if save_manual_btn:
             ts = get_current_ist_time()
@@ -558,13 +587,13 @@ elif st.session_state["current_view"] == "MANUAL_IDE":
                     "script_content": typed_script,
                     "parsed_data": {"formatted_script": typed_script},
                     "saved_at_formatted": ts,
-                    "is_exported": False,
+                    "is_exported": True,
                     "is_manual": True
                 }).execute()
-                st.success(f"Manual screenplay archived at {ts}")
+                st.success(f"Manual screenplay archived and synced to Exported Dossiers at {ts}")
             except Exception as e:
                 st.error(f"Error saving: {e}")
-
+                
         api_key = st.secrets.get("GEMINI_API_KEY", "")
         if fix_btn:
             if not api_key:
