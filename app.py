@@ -1009,8 +1009,8 @@ elif st.session_state["current_view"] == "EXPORTED":
     st.markdown("<h2 style='font-family:Orbitron; color:#00f0ff;'>📦 EXPORTED PDF DOSSIERS</h2>", unsafe_allow_html=True)
     try:
         res = supabase.table("saved_scripts").select("*").eq("user_id", st.session_state["user"].id).eq("is_exported", True).order("created_at", desc=True).execute()
-        items = res.data or []
-        if not items:
+        exported_items = res.data or []
+        if not exported_items:
             st.info("No exported PDFs found.")
         else:
             for item in exported_items:
